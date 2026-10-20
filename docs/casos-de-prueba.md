@@ -2,7 +2,7 @@
 
 **Proyecto 2 — Sistema de pedidos e inventario para un local de comida** · Equipo N.º 11
 
-> Este documento describe los datos de prueba que carga [`database/sistema_pedidos_datos.sql`](../database/sistema_pedidos_datos.sql) y los casos de prueba que comprueban que la base de datos cumple con los [requerimientos](requerimientos.md). [← Volver al README](../README.md)
+> Este documento describe los datos de prueba que cargan los seeders de Laravel ([`database/seeders/`](../database/seeders/)) y el script [`database/sql/sistema_pedidos_datos.sql`](../database/sql/sistema_pedidos_datos.sql) y los casos de prueba que comprueban que la base de datos cumple con los [requerimientos](requerimientos.md). [← Volver al README](../README.md)
 
 ## Contenido
 
@@ -106,7 +106,7 @@ Hay 6 categorías: Desayunos, Entradas, Sopas, Platos fuertes, Bebidas y Postres
 
 ## 2. Cómo ejecutar un caso de prueba
 
-1. Importa `database/sistema_pedidos_datos.sql` (ver el [README](../README.md#instalación)) para partir de los datos originales.
+1. Carga los datos originales: con Laravel ejecuta `php artisan migrate:fresh --seed` (ver el [README](../README.md#6-ejecutar-las-migraciones-y-cargar-los-datos-de-prueba)), o importa `database/sql/sistema_pedidos_datos.sql` ([alternativa sin Laravel](../README.md#alternativa-sin-laravel-scripts-sql)). Ambos dejan exactamente los mismos datos.
 2. En phpMyAdmin, haz clic en **sistema_pedidos** en el panel izquierdo y abre la pestaña **SQL**.
 3. Copia la consulta del caso de prueba, pégala en el recuadro y pulsa **Continuar**.
 4. Compara lo que aparece en pantalla con el **resultado esperado**.

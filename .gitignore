@@ -1,54 +1,42 @@
-# =========================================================
-#  Archivos que Git NO debe subir al repositorio
-# =========================================================
-
-# --- Configuración con contraseñas o datos privados ---
-# (cuando se programe la aplicación, la conexión a la base de
-#  datos irá en uno de estos archivos; se sube solo un ejemplo)
-.env
-.env.*
-!.env.example
-config/config.php
-config/database.php
-!config/*.example.php
-
-# --- Dependencias que se descargan automáticamente ---
-/vendor/
-node_modules/
-
-# --- Registros, temporales y respaldos ---
 *.log
-*.tmp
-*.bak
-*.swp
-*~
-/tmp/
-/cache/
-/uploads/
-
-# --- Respaldos o exportaciones locales de la base de datos ---
-# (los scripts oficiales están en database/ y SÍ se suben)
-/backups/
-*.sql.gz
-*.zip
-
-# --- Archivos temporales de Office (documento abierto) ---
-~$*
-
-# --- Archivos del sistema operativo ---
 .DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
 Thumbs.db
+
+# --- Agregado por el equipo ---
+# Archivos temporales de Office (documento abierto)
+~$*
+# Archivos del sistema operativo y de Google Drive
 desktop.ini
 .directory
-
-# --- Google Drive ---
 *.gdoc
 *.gsheet
 *.gslides
 .tmp.drivedownload/
 .tmp.driveupload/
-
-# --- Editores de código ---
-.vscode/
-.idea/
-*.code-workspace
+# Respaldos locales de la base de datos
+/backups/
+*.sql.gz
