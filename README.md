@@ -18,9 +18,13 @@ Sistema para organizar y controlar el proceso de pedidos de un establecimiento d
 | Herramienta | Versión | Para qué se usa |
 |---|---|---|
 | [Laravel](https://laravel.com) | 13.x | Framework de PHP: migraciones, modelos y datos de prueba. |
+| [Filament](https://filamentphp.com) | 5.x | Panel administrativo: recursos, formularios y tablas (CRUD). |
 | PHP | 8.3 o superior | Lenguaje en el que está hecho Laravel. |
 | [Composer](https://getcomposer.org) | 2.x | Descarga las librerías que necesita Laravel. |
-| XAMPP (MariaDB) | 8.2 o superior | Servidor de base de datos y phpMyAdmin. |
+| [Laravel Herd](https://herd.laravel.com) (Windows) | 1.x | Trae PHP y Composer; con **SQLite** como base de datos. Es lo que se usa en la escuela. |
+| XAMPP (MariaDB) (Ubuntu) | 8.2 o superior | Servidor de base de datos y phpMyAdmin. |
+
+El proyecto funciona igual con **SQLite** (Herd en Windows) y con **MySQL/MariaDB** (XAMPP).
 
 ## Contenido del repositorio
 
@@ -28,15 +32,19 @@ Este repositorio es un proyecto **Laravel**. Las carpetas más importantes para 
 
 ```
 .
-├── app/Models/                 ← 10 modelos con sus relaciones (Eloquent)
+├── app/
+│   ├── Filament/               ← panel administrativo: recursos, inicio de sesión y botones
+│   ├── Models/                 ← 10 modelos con sus relaciones (Eloquent)
+│   └── Services/               ← reglas de negocio de los pedidos (PedidoService)
 ├── database/
-│   ├── migrations/             ← 10 migraciones: una por tabla del diagrama
+│   ├── migrations/             ← 10 migraciones del diagrama + 3 de la Evaluación 1
 │   ├── seeders/                ← datos de prueba (8 seeders)
 │   └── sql/                    ← scripts SQL equivalentes (alternativa sin Laravel)
 ├── docs/
 │   ├── requerimientos.md       ← planeación: problemática, reglas, requisitos y diagramas
 │   ├── casos-de-prueba.md      ← datos de prueba y 28 casos de prueba
 │   └── img/                    ← diagrama entidad-relación y panel administrativo
+├── lang/es/                    ← mensajes de validación en español
 ├── .env.example                ← configuración de ejemplo (ya apunta a XAMPP)
 └── README.md                   ← este archivo
 ```
@@ -70,6 +78,54 @@ La base de datos `sistema_pedidos` reproduce exactamente el diagrama entidad-rel
 - Las relaciones **1 : N** del diagrama se programaron con `hasMany()` (lado "uno") y `belongsTo()` (lado "muchos").
 - La relación **N : M** entre `Pedido` y `Producto` se resuelve con `detalle_pedido` y se programó con `belongsToMany()`.
 - Además, la base de datos rechaza datos incorrectos con restricciones `CHECK`, `UNIQUE` y llaves foráneas: folios repetidos (RN-01), cantidades menores a 1 (RN-03), existencias negativas (RN-06), subtotales mal calculados (RN-14), precios de cero (RN-16) y el borrado de registros con información relacionada (RN-21).
+
+## Panel administrativo (Filament 5)
+
+Se entra en `/admin` con un usuario de la tabla `usuario` (ver [Usuarios de prueba](#usuarios-de-prueba)). Solo los usuarios **activos** pueden entrar (RN-24).
+
+| Recurso | Formulario | Tabla | Botones especiales |
+|---|---|---|---|
+| **Categorías** | Nombre, activa | Nombre, número de productos, activa; filtro por estado | Desactivar / Activar |
+| **Productos** | Nombre, categoría, descripción, precio, existencia, mínimo, activo | Precio en pesos, existencia con colores (agotado / stock bajo), filtros por categoría, estado y stock bajo | Desactivar / Activar |
+| **Clientes** | Nombre, teléfono, activo | Nombre, teléfono, número de pedidos; filtro por estado | Desactivar / Activar |
+| **Pedidos** | Cliente, tipo de servicio, observaciones y productos con cantidades | Folio, fecha, cliente, estado con colores, servicio, total; filtros por estado, servicio y fecha | Pasar al siguiente estado, Cancelar (con motivo) |
+
+- **Eliminar = desactivar**: los registros no se borran; se marcan como inactivos para conservar el historial (RN-21).
+- **Pedidos**: el sistema genera el folio `PED-####`, copia el precio del menú, calcula el total, valida y descuenta existencias, y guarda el historial de estados. Al cancelar, las existencias regresan al inventario.
+- **Validaciones**: los formularios repiten las reglas de la base de datos (precio mayor que 0, cantidad de al menos 1, existencia no negativa), así se cumplen también en SQLite.
+- **Cambios a la base de datos (Evaluación 1)**: campo `activo` en `categoria` (RF-10) y `cliente`, y campo `motivo_cancelacion` en `pedido` (RF-31).
+
+## Instalación en Windows con Laravel Herd (SQLite)
+
+Requisitos: [Laravel Herd](https://herd.laravel.com/windows) y [Git para Windows](https://git-scm.com/download/win). Los comandos se escriben en **PowerShell**.
+
+```powershell
+cd $HOME\Herd
+git clone https://github.com/Angeltron10000/sistema-pedidos-inventario.git
+cd sistema-pedidos-inventario
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+```
+
+Abre el archivo `.env` con el Bloc de notas (`notepad .env`) y deja así la parte de la base de datos:
+
+```ini
+DB_CONNECTION=sqlite
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=sistema_pedidos
+# DB_USERNAME=root
+# DB_PASSWORD=
+```
+
+Después crea las tablas con los datos de prueba (responde **yes** si pregunta si quieres crear el archivo de SQLite):
+
+```powershell
+php artisan migrate:fresh --seed
+```
+
+Abre en el navegador **http://sistema-pedidos-inventario.test/admin** y entra con `admin` / `Prueba123`.
 
 ## Instalación (Ubuntu + XAMPP)
 
@@ -167,7 +223,15 @@ php artisan migrate:fresh --seed
 php artisan migrate:status
 ```
 
-Deben aparecer las 10 migraciones con estado **Ran**. Después abre phpMyAdmin y revisa las tablas de `sistema_pedidos`. Para pruebas más completas, sigue los [casos de prueba](docs/casos-de-prueba.md).
+Deben aparecer las 13 migraciones con estado **Ran**. Después abre phpMyAdmin y revisa las tablas de `sistema_pedidos`. Para pruebas más completas, sigue los [casos de prueba](docs/casos-de-prueba.md).
+
+Para abrir el panel administrativo:
+
+```bash
+php artisan serve
+```
+
+y entra a **http://127.0.0.1:8000/admin** con `admin` / `Prueba123`.
 
 ### Probar las relaciones con Tinker
 
@@ -236,7 +300,8 @@ Todos tienen la contraseña **`Prueba123`** (guardada cifrada con bcrypt).
 - [x] Diseño de la base de datos (diagrama entidad-relación)
 - [x] Scripts SQL y casos de prueba
 - [x] Migraciones, modelos con relaciones y datos de prueba en Laravel
-- [ ] Aplicación (panel administrativo, pedidos, inventario y reportes)
+- [x] Panel administrativo con Filament 5: recursos y CRUD de categorías, productos, clientes y pedidos (Evaluación 1)
+- [ ] Usuarios, movimientos de inventario, permisos por rol y reportes
 
 ## Licencia
 
