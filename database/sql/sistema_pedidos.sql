@@ -68,6 +68,7 @@ CREATE TABLE cliente (
   id_cliente  INT         NOT NULL AUTO_INCREMENT,
   nombre      VARCHAR(80) NOT NULL,
   telefono    VARCHAR(15) NULL,
+  activo      TINYINT(1)  NOT NULL DEFAULT 1,   -- baja lógica (Evaluación 1)
   PRIMARY KEY (id_cliente)
 ) ENGINE=InnoDB;
 
@@ -89,6 +90,7 @@ CREATE TABLE estado_pedido (
 CREATE TABLE categoria (
   id_categoria  INT         NOT NULL AUTO_INCREMENT,
   nombre        VARCHAR(50) NOT NULL,
+  activo        TINYINT(1)  NOT NULL DEFAULT 1,   -- RF-10: baja lógica (Evaluación 1)
   PRIMARY KEY (id_categoria)
 ) ENGINE=InnoDB;
 
@@ -131,6 +133,7 @@ CREATE TABLE pedido (
   tipo_servicio  ENUM('local','llevar') NOT NULL DEFAULT 'local',
   total          DECIMAL(10,2)          NOT NULL DEFAULT 0.00,
   observaciones  VARCHAR(200)           NULL,
+  motivo_cancelacion VARCHAR(200)       NULL,      -- RF-31 (Evaluación 1)
   PRIMARY KEY (id_pedido),
   UNIQUE KEY uq_pedido_folio (folio),
   CONSTRAINT fk_pedido_cliente

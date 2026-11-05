@@ -31,6 +31,7 @@ class Pedido extends Model
         'tipo_servicio',
         'total',
         'observaciones',
+        'motivo_cancelacion',
     ];
 
     /**
@@ -99,5 +100,37 @@ class Pedido extends Model
     public function movimientos(): HasMany
     {
         return $this->hasMany(MovimientoInventario::class, 'id_pedido', 'id_pedido');
+    }
+
+    /**
+     * Estado al que pasa el pedido con el botón de avanzar (RN-08).
+     * Recibido (1) → En preparación (2) → Listo (3) → Entregado (4).
+     * Devuelve null si ya está Entregado o Cancelado.
+     */
+    public function siguienteEstado(): ?EstadoPedido
+    {
+        $orden = $this->estado?->orden ?? 0;
+
+        if ($orden < 1 || $orden >= 4) {
+            return null;
+        }
+
+        return EstadoPedido::where('orden', $orden + 1)->first();
+    }
+
+    /**
+     * Solo se cancela un pedido que todavía no está listo (Recibido o En preparación).
+     */
+    public function sePuedeCancelar(): bool
+    {
+        return in_array($this->estado?->orden, [1, 2], true);
+    }
+
+    /**
+     * Los datos generales del pedido solo se editan mientras está en "Recibido" (RN-11).
+     */
+    public function sePuedeEditar(): bool
+    {
+        return $this->estado?->orden === 1;
     }
 }
