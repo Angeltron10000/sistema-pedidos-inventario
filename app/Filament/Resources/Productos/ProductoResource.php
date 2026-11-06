@@ -11,6 +11,7 @@ use App\Filament\Resources\Productos\Schemas\ProductoInfolist;
 use App\Filament\Resources\Productos\Tables\ProductosTable;
 use App\Models\Producto;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -20,7 +21,17 @@ class ProductoResource extends Resource
 {
     protected static ?string $model = Producto::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
+
+    /** Textos en español que muestra Filament (menú, títulos y botones). */
+    protected static ?string $modelLabel = 'producto';
+
+    protected static ?string $pluralModelLabel = 'productos';
+
+    /** Grupo y orden dentro del menú lateral. */
+    protected static string|UnitEnum|null $navigationGroup = 'Catálogos';
+
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'nombre';
 

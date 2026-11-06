@@ -11,6 +11,7 @@ use App\Filament\Resources\Categorias\Schemas\CategoriaInfolist;
 use App\Filament\Resources\Categorias\Tables\CategoriasTable;
 use App\Models\Categoria;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -20,7 +21,17 @@ class CategoriaResource extends Resource
 {
     protected static ?string $model = Categoria::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
+
+    /** Textos en español que muestra Filament (menú, títulos y botones). */
+    protected static ?string $modelLabel = 'categoría';
+
+    protected static ?string $pluralModelLabel = 'categorías';
+
+    /** Grupo y orden dentro del menú lateral. */
+    protected static string|UnitEnum|null $navigationGroup = 'Catálogos';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'nombre';
 
