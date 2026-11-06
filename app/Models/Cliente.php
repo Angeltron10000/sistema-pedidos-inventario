@@ -23,7 +23,18 @@ class Cliente extends Model
     protected $fillable = [
         'nombre',
         'telefono',
+        'activo',
     ];
+
+    /**
+     * Conversión automática de tipos de dato.
+     */
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     /**
      * Un cliente puede realizar muchos pedidos (CLIENTE 1 : N PEDIDO).

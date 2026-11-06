@@ -2,6 +2,5 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// La página principal lleva directo al panel administrativo de Filament.
+Route::redirect('/', '/admin');

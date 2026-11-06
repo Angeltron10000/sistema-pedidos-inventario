@@ -29,10 +29,15 @@ return new class extends Migration
                   ->cascadeOnUpdate()->restrictOnDelete();
         });
 
-        // Validaciones de las reglas de negocio (restricciones CHECK)
-        DB::statement('ALTER TABLE detalle_pedido ADD CONSTRAINT chk_detalle_cantidad CHECK (cantidad >= 1)');
-        DB::statement('ALTER TABLE detalle_pedido ADD CONSTRAINT chk_detalle_precio CHECK (precio_unitario > 0)');
-        DB::statement('ALTER TABLE detalle_pedido ADD CONSTRAINT chk_detalle_subtotal CHECK (subtotal = cantidad * precio_unitario)');
+        // Validaciones de las reglas de negocio (restricciones CHECK).
+        // SQLite (la base que usa Laravel Herd en Windows) no permite agregar CHECK
+        // a una tabla ya creada, por eso solo se agregan en MySQL / MariaDB.
+        // En SQLite estas mismas reglas se validan en los formularios de Filament.
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE detalle_pedido ADD CONSTRAINT chk_detalle_cantidad CHECK (cantidad >= 1)');
+            DB::statement('ALTER TABLE detalle_pedido ADD CONSTRAINT chk_detalle_precio CHECK (precio_unitario > 0)');
+            DB::statement('ALTER TABLE detalle_pedido ADD CONSTRAINT chk_detalle_subtotal CHECK (subtotal = cantidad * precio_unitario)');
+        }
     }
 
     /**
