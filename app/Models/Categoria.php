@@ -22,7 +22,18 @@ class Categoria extends Model
     /** Campos que se pueden llenar con create() o fill(). */
     protected $fillable = [
         'nombre',
+        'activo',
     ];
+
+    /**
+     * Conversión automática de tipos de dato.
+     */
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     /**
      * Una categoría agrupa muchos productos (CATEGORIA 1 : N PRODUCTO).

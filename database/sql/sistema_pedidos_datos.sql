@@ -69,6 +69,7 @@ CREATE TABLE cliente (
   id_cliente  INT         NOT NULL AUTO_INCREMENT,
   nombre      VARCHAR(80) NOT NULL,
   telefono    VARCHAR(15) NULL,
+  activo      TINYINT(1)  NOT NULL DEFAULT 1,   -- baja lógica (Evaluación 1)
   PRIMARY KEY (id_cliente)
 ) ENGINE=InnoDB;
 
@@ -90,6 +91,7 @@ CREATE TABLE estado_pedido (
 CREATE TABLE categoria (
   id_categoria  INT         NOT NULL AUTO_INCREMENT,
   nombre        VARCHAR(50) NOT NULL,
+  activo        TINYINT(1)  NOT NULL DEFAULT 1,   -- RF-10: baja lógica (Evaluación 1)
   PRIMARY KEY (id_categoria)
 ) ENGINE=InnoDB;
 
@@ -132,6 +134,7 @@ CREATE TABLE pedido (
   tipo_servicio  ENUM('local','llevar') NOT NULL DEFAULT 'local',
   total          DECIMAL(10,2)          NOT NULL DEFAULT 0.00,
   observaciones  VARCHAR(200)           NULL,
+  motivo_cancelacion VARCHAR(200)       NULL,      -- RF-31 (Evaluación 1)
   PRIMARY KEY (id_pedido),
   UNIQUE KEY uq_pedido_folio (folio),
   CONSTRAINT fk_pedido_cliente
@@ -348,6 +351,12 @@ INSERT INTO pedido (id_pedido, folio, id_cliente, id_usuario, id_estado, fecha_h
   (19, 'PED-0019', 1, 3, 1, IF(CURTIME() >= '03:00:00', NOW() - INTERVAL 8 MINUTE, TIMESTAMP(CURRENT_DATE) + INTERVAL ROUND(TIME_TO_SEC(CURTIME()) * 0.9556) SECOND), 'llevar', 170.00, NULL);
 
 -- Detalle de los pedidos (precio_unitario congelado; subtotal = cantidad × precio)
+-- RF-31: el motivo de cancelación se guarda en su propio campo
+UPDATE pedido
+   SET motivo_cancelacion = SUBSTRING(observaciones, 12),
+       observaciones = NULL
+ WHERE observaciones LIKE 'Cancelado: %';
+
 INSERT INTO detalle_pedido (id_detalle, id_pedido, id_producto, cantidad, precio_unitario, subtotal, notas) VALUES
   (1, 1, 1, 2, 129.00, 258.00, NULL),
   (2, 1, 14, 2, 45.00, 90.00, NULL),

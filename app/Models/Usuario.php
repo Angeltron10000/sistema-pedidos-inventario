@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasName;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -9,8 +12,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 /**
  * Empleados que utilizan el sistema; cada uno tiene un rol.
  * Extiende de Authenticatable para poder usarse en el inicio de sesión.
+ * Implementa FilamentUser y HasName para entrar al panel de Filament.
  */
-class Usuario extends Authenticatable
+class Usuario extends Authenticatable implements FilamentUser, HasName
 {
     /** Nombre de la tabla en la base de datos. */
     protected $table = 'usuario';
@@ -42,6 +46,30 @@ class Usuario extends Authenticatable
     public function getAuthPassword(): string
     {
         return $this->contrasena_hash;
+    }
+
+    /**
+     * Nombre de la columna de la contraseña (Laravel la usa si necesita volver a cifrarla).
+     */
+    public function getAuthPasswordName(): string
+    {
+        return 'contrasena_hash';
+    }
+
+    /**
+     * Solo los usuarios activos pueden entrar al panel de Filament (RN-24).
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->activo;
+    }
+
+    /**
+     * Nombre que Filament muestra en la esquina superior (menú del usuario).
+     */
+    public function getFilamentName(): string
+    {
+        return trim($this->nombre . ' ' . $this->apellidos);
     }
 
     /**

@@ -105,6 +105,14 @@ class PedidoSeeder extends Seeder
         $folio = sprintf('PED-%04d', $numero);        // RN-01: PED-0001, PED-0002, ...
         $recibido = $this->momento($datos['cuando']);
 
+        // Si el pedido fue cancelado, el motivo se guarda en su propio campo (RF-31)
+        $obs = $datos['obs'] ?? null;
+        $motivo = null;
+        if ($obs !== null && str_starts_with($obs, 'Cancelado: ')) {
+            $motivo = substr($obs, strlen('Cancelado: '));
+            $obs = null;
+        }
+
         $pedido = Pedido::create([
             'folio'         => $folio,
             'id_cliente'    => $datos['cliente'],
@@ -113,7 +121,8 @@ class PedidoSeeder extends Seeder
             'fecha_hora'    => $recibido,
             'tipo_servicio' => $datos['servicio'],
             'total'         => 0,
-            'observaciones' => $datos['obs'] ?? null,
+            'observaciones' => $obs,
+            'motivo_cancelacion' => $motivo,
         ]);
 
         // Detalle del pedido y salida de inventario por cada producto
