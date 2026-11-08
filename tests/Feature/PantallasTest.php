@@ -144,6 +144,21 @@ class PantallasTest extends TestCase
         $this->assertSame(3, $producto->fresh()->existencia);
     }
 
+    public function test_ajuste_igual_a_la_existencia_muestra_aviso_y_no_cambia_nada(): void   // RN-23
+    {
+        $this->entrarComo('admin');
+        $producto = Producto::find(4);
+        $antes = $producto->existencia;
+        $movimientos = $producto->movimientos()->count();
+
+        Livewire::test(ListProductos::class)
+            ->callTableAction('ajustarExistencia', $producto, data: ['existencia_real' => $antes, 'motivo' => 'Merma'])
+            ->assertNotified('La existencia real es igual a la actual; no hay nada que ajustar.');
+
+        $this->assertSame($antes, $producto->fresh()->existencia);
+        $this->assertSame($movimientos, $producto->movimientos()->count());
+    }
+
     public function test_el_cajero_no_ve_los_botones_de_inventario(): void                      // RN-23
     {
         $this->entrarComo('jperez');

@@ -125,7 +125,7 @@ Se entra en `/admin` con un usuario de la tabla `usuario` (ver [Usuarios de prue
 Los permisos están en `app/Policies`. Las reglas de pedidos e inventario están en `app/Services/PedidoService.php` e `app/Services/InventarioService.php`.
 
 - **Cambio a la base de datos**: tabla nueva `configuracion` (nombre del negocio y horario de servicio). Después de descargar los cambios hay que ejecutar `php artisan migrate`.
-- **Pruebas automáticas**: `php artisan test` revisa las reglas de negocio y las pantallas (31 pruebas, usan una base temporal y no tocan los datos).
+- **Pruebas automáticas**: `php artisan test` revisa las reglas de negocio y las pantallas (32 pruebas, usan una base temporal y no tocan los datos).
 
 ## Instalación en Windows con Laravel Herd (SQLite)
 

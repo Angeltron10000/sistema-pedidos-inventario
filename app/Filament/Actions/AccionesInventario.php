@@ -10,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Botones de inventario que aparecen en Productos (solo para el Administrador):
@@ -42,10 +43,14 @@ class AccionesInventario
                     ->maxLength(120),
             ])
             ->modalSubmitActionLabel('Registrar entrada')
-            ->action(function (Producto $record, array $data): void {
-                app(InventarioService::class)->registrarEntrada(
-                    $record, (int) $data['cantidad'], $data['motivo'] ?? null, auth()->user()
-                );
+            ->action(function (Producto $record, array $data, Action $action): void {
+                try {
+                    app(InventarioService::class)->registrarEntrada(
+                        $record, (int) $data['cantidad'], $data['motivo'] ?? null, auth()->user()
+                    );
+                } catch (ValidationException $e) {
+                    self::avisarError($e, $action);
+                }
                 $record->refresh();
 
                 Notification::make()
@@ -93,10 +98,14 @@ class AccionesInventario
                     ->maxLength(80),
             ])
             ->modalSubmitActionLabel('Guardar ajuste')
-            ->action(function (Producto $record, array $data): void {
-                $movimiento = app(InventarioService::class)->ajustar(
-                    $record, (int) $data['existencia_real'], $data['motivo'], $data['detalle'] ?? null, auth()->user()
-                );
+            ->action(function (Producto $record, array $data, Action $action): void {
+                try {
+                    $movimiento = app(InventarioService::class)->ajustar(
+                        $record, (int) $data['existencia_real'], $data['motivo'], $data['detalle'] ?? null, auth()->user()
+                    );
+                } catch (ValidationException $e) {
+                    self::avisarError($e, $action);
+                }
                 $record->refresh();
 
                 Notification::make()
@@ -105,5 +114,19 @@ class AccionesInventario
                     ->success()
                     ->send();
             });
+    }
+
+    /**
+     * Si el servicio rechaza el movimiento (por ejemplo, la existencia real es igual a la actual),
+     * se muestra el motivo en un aviso rojo y la ventana se queda abierta para corregir.
+     */
+    private static function avisarError(ValidationException $e, Action $action): never
+    {
+        Notification::make()
+            ->title(collect($e->errors())->flatten()->first())
+            ->danger()
+            ->send();
+
+        $action->halt();
     }
 }
