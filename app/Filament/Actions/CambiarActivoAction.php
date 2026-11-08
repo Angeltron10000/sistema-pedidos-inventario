@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * En lugar de borrar el registro (lo que haría perder el historial de pedidos),
  * solo cambia su campo "activo" (baja lógica, RN-21).
- * Se usa en Categorías, Productos y Clientes.
+ * Se usa en Categorías, Productos, Clientes y Usuarios.
  */
 class CambiarActivoAction
 {
@@ -21,6 +21,8 @@ class CambiarActivoAction
             ->label(fn (Model $record): string => $record->activo ? 'Desactivar' : 'Activar')
             ->icon(fn (Model $record): string => $record->activo ? 'heroicon-o-no-symbol' : 'heroicon-o-check-circle')
             ->color(fn (Model $record): string => $record->activo ? 'danger' : 'success')
+            // Solo aparece para quien tiene permiso (método desactivar() de cada Policy, RN-25)
+            ->visible(fn (Model $record): bool => auth()->user()?->can('desactivar', $record) ?? false)
             ->requiresConfirmation()
             ->modalHeading(fn (Model $record): string => ($record->activo ? 'Desactivar ' : 'Activar ') . $record->nombre)
             ->modalDescription(fn (Model $record): string => $record->activo

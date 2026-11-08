@@ -44,6 +44,10 @@ class PedidoInfolist
                         TextEntry::make('usuario.nombre')
                             ->label('Registró')
                             ->formatStateUsing(fn ($record): string => $record->usuario->getFilamentName()),
+                        TextEntry::make('espera')
+                            ->label('Tiempo de espera')
+                            ->state(fn ($record): string => $record->tiempoDeEspera())          // RF-37
+                            ->icon('heroicon-o-clock'),
                         TextEntry::make('observaciones')
                             ->label('Observaciones')
                             ->placeholder('Sin observaciones'),

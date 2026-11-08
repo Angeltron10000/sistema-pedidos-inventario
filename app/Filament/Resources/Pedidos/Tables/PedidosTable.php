@@ -65,16 +65,29 @@ class PedidosTable
                     ->label('Total')
                     ->money('MXN', locale: 'es_MX')
                     ->sortable(),
+                TextColumn::make('espera')
+                    ->label('Espera')
+                    ->state(fn (Pedido $record): string => $record->tiempoDeEspera())      // RF-37
+                    ->icon('heroicon-o-clock')
+                    // En rojo los pedidos activos que llevan más de 30 minutos
+                    ->color(fn (Pedido $record): string => $record->estaActivo() && $record->minutosDeEspera() > 30 ? 'danger' : 'gray')
+                    ->tooltip('Tiempo desde que se recibió el pedido (hasta su entrega o cancelación)'),
                 TextColumn::make('usuario.usuario')
                     ->label('Registró')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['estado', 'cliente', 'historial']))
             ->defaultSort('fecha_hora', 'desc')
             ->filters([
                 SelectFilter::make('id_estado')
                     ->label('Estado')
                     ->relationship('estado', 'nombre')
                     ->multiple(),
+                SelectFilter::make('id_cliente')
+                    ->label('Cliente')
+                    ->relationship('cliente', 'nombre')
+                    ->searchable()
+                    ->preload(),
                 SelectFilter::make('tipo_servicio')
                     ->label('Servicio')
                     ->options([
@@ -95,8 +108,10 @@ class PedidosTable
                 AccionesPedido::avanzar(),
                 ActionGroup::make([
                     ViewAction::make(),
+                    AccionesPedido::comprobante(),
                     EditAction::make()
-                        ->visible(fn (Pedido $record): bool => $record->sePuedeEditar()),
+                        ->label('Modificar')
+                        ->visible(fn (Pedido $record): bool => auth()->user()?->can('update', $record) ?? false),
                     AccionesPedido::cancelar(),
                 ]),
             ]);

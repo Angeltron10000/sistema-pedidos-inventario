@@ -10,6 +10,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Rol extends Model
 {
+    /**
+     * Número (id_rol) de cada rol, tal como los crea RolSeeder.
+     * Se usan para decidir qué puede hacer cada usuario (RN-25).
+     */
+    public const ADMINISTRADOR = 1;
+
+    public const CAJERO = 2;            // Cajero/Mesero
+
+    public const COCINA = 3;
+
     /** Nombre de la tabla en la base de datos. */
     protected $table = 'rol';
 
