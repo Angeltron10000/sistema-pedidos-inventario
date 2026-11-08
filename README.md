@@ -95,6 +95,38 @@ Se entra en `/admin` con un usuario de la tabla `usuario` (ver [Usuarios de prue
 - **Validaciones**: los formularios repiten las reglas de la base de datos (precio mayor que 0, cantidad de al menos 1, existencia no negativa), así se cumplen también en SQLite.
 - **Cambios a la base de datos (Evaluación 1)**: campo `activo` en `categoria` (RF-10) y `cliente`, y campo `motivo_cancelacion` en `pedido` (RF-31).
 
+### Funciones completas de la planeación
+
+| Pantalla (menú) | Qué hace | Requisitos y reglas |
+|---|---|---|
+| **Escritorio** | Indicadores del día: pedidos, por preparar, listos, ventas y stock bajo; tabla de productos por resurtir; gráfica de ventas de 7 días | RF-38, RF-21 |
+| **Tablero de cocina** | Pedidos activos en tres columnas (Recibido, En preparación, Listo), con tiempo de espera; se actualiza solo cada 15 s | RF-36, RF-37 |
+| **Pedidos** | Registrar (buscar cliente por nombre o teléfono, botón + para cliente nuevo), modificar productos mientras está en "Recibido", comprobante para imprimir, tiempo de espera, filtros por estado, fecha, cliente y servicio | RF-23 a RF-37, RN-01 a RN-15, RN-26, RN-27 |
+| **Productos** | Botones **Registrar entrada** (resurtido) y **Ajustar existencia** (merma o conteo, con motivo); movimientos de cada producto; número rojo en el menú con los productos en stock bajo | RF-16, RF-17, RF-20, RF-21, RN-20, RN-22, RN-23 |
+| **Movimientos de inventario** | Historial de entradas, salidas y ajustes, con filtros por producto, tipo, fecha y usuario | RF-22 |
+| **Reportes** | Ventas por día o periodo, productos más vendidos, pedidos por estado e inventario por resurtir (en pantalla) | RF-39 a RF-42 |
+| **Usuarios** | Alta, consulta, edición, rol y desactivar empleados | RF-04 a RF-07 |
+| **Configuración** | Nombre del negocio y horario de servicio (por defecto 8:00 a 22:00) | RN-27 |
+| **Cambiar contraseña** (menú del usuario, arriba a la derecha) | Cada usuario cambia su contraseña escribiendo la actual | RF-08 |
+
+**Permisos por rol (RN-25, RF-03)** — el menú y los botones cambian según el rol:
+
+| Función | Administrador | Cajero/Mesero | Cocina |
+|---|:---:|:---:|:---:|
+| Registrar, modificar y cancelar pedidos | ✔ | ✔ | — |
+| Pasar a "En preparación" y "Listo" | ✔ | — | ✔ |
+| Entregar pedidos ("Listo" → "Entregado") | ✔ | ✔ | — |
+| Ver pedidos y tablero de cocina | ✔ | ✔ | ✔ |
+| Registrar y editar clientes | ✔ | ✔ | — |
+| Consultar productos | ✔ | ✔ | — |
+| Categorías, productos (editar), entradas y ajustes | ✔ | — | — |
+| Movimientos, reportes, usuarios y configuración | ✔ | — | — |
+
+Los permisos están en `app/Policies`. Las reglas de pedidos e inventario están en `app/Services/PedidoService.php` e `app/Services/InventarioService.php`.
+
+- **Cambio a la base de datos**: tabla nueva `configuracion` (nombre del negocio y horario de servicio). Después de descargar los cambios hay que ejecutar `php artisan migrate`.
+- **Pruebas automáticas**: `php artisan test` revisa las reglas de negocio y las pantallas (31 pruebas, usan una base temporal y no tocan los datos).
+
 ## Instalación en Windows con Laravel Herd (SQLite)
 
 Requisitos: [Laravel Herd](https://herd.laravel.com/windows) y [Git para Windows](https://git-scm.com/download/win). Los comandos se escriben en **PowerShell**.
@@ -301,7 +333,7 @@ Todos tienen la contraseña **`Prueba123`** (guardada cifrada con bcrypt).
 - [x] Scripts SQL y casos de prueba
 - [x] Migraciones, modelos con relaciones y datos de prueba en Laravel
 - [x] Panel administrativo con Filament 5: recursos y CRUD de categorías, productos, clientes y pedidos (Evaluación 1)
-- [ ] Usuarios, movimientos de inventario, permisos por rol y reportes
+- [x] Usuarios, movimientos de inventario, permisos por rol, tablero de cocina, indicadores y reportes (todas las funciones de la planeación)
 
 ## Licencia
 

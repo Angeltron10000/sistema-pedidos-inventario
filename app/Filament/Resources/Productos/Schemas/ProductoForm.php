@@ -57,7 +57,7 @@ class ProductoForm
                     ])
                     ->columns(2),
                 Section::make('Precio e inventario')
-                    ->description('La existencia se descuenta sola cada vez que se registra un pedido.')
+                    ->description('La existencia se descuenta sola con cada pedido y se regresa si el pedido se cancela.')
                     ->schema([
                         TextInput::make('precio')
                             ->label('Precio de venta')
@@ -70,11 +70,19 @@ class ProductoForm
                                 'gt' => 'El precio debe ser mayor que 0.',
                             ]),
                         TextInput::make('existencia')
-                            ->label('Existencia (piezas disponibles)')
+                            ->label(fn (string $operation): string => $operation === 'create'
+                                ? 'Existencia inicial (piezas)'
+                                : 'Existencia (piezas disponibles)')
                             ->integer()
                             ->required()
                             ->minValue(0)                                      // RN-06
                             ->default(0)
+                            // Al editar ya no se escribe a mano: se usan los botones "Registrar entrada"
+                            // o "Ajustar existencia", que guardan el movimiento con su motivo (RN-22, RN-23)
+                            ->disabledOn('edit')
+                            ->helperText(fn (string $operation): ?string => $operation === 'edit'
+                                ? 'Para cambiarla usa los botones "Registrar entrada" o "Ajustar existencia".'
+                                : null)
                             ->validationMessages([
                                 'min' => 'La existencia no puede ser negativa.',
                             ]),
