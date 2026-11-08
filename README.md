@@ -19,7 +19,7 @@ Sistema para organizar y controlar el proceso de pedidos de un establecimiento d
 |---|---|---|
 | [Laravel](https://laravel.com) | 13.x | Framework de PHP: migraciones, modelos y datos de prueba. |
 | [Filament](https://filamentphp.com) | 5.x | Panel administrativo: recursos, formularios y tablas (CRUD). |
-| PHP | 8.3 o superior | Lenguaje en el que está hecho Laravel. |
+| PHP | 8.4 o superior | Lenguaje en el que está hecho Laravel. |
 | [Composer](https://getcomposer.org) | 2.x | Descarga las librerías que necesita Laravel. |
 | [Laravel Herd](https://herd.laravel.com) (Windows) | 1.x | Trae PHP y Composer; con **SQLite** como base de datos. Es lo que se usa en la escuela. |
 | XAMPP (MariaDB) (Ubuntu) | 8.2 o superior | Servidor de base de datos y phpMyAdmin. |
@@ -129,7 +129,7 @@ Los permisos están en `app/Policies`. Las reglas de pedidos e inventario están
 
 ## Instalación en Windows con Laravel Herd (SQLite)
 
-Requisitos: [Laravel Herd](https://herd.laravel.com/windows) y [Git para Windows](https://git-scm.com/download/win). Los comandos se escriben en **PowerShell**.
+Requisitos: [Laravel Herd](https://herd.laravel.com/windows) con **PHP 8.4 o superior** y [Git para Windows](https://git-scm.com/download/win). Los comandos se escriben en **PowerShell**.
 
 ```powershell
 cd $HOME\Herd
@@ -172,27 +172,21 @@ sudo /opt/lampp/lampp start
 
 ### 2. Instalar PHP, Composer y Git (solo la primera vez)
 
-Laravel 13 necesita **PHP 8.3 o superior**. En **Ubuntu 24.04** se instala así:
+El proyecto necesita **PHP 8.4 o superior** (sus librerías, como Symfony 8, ya no funcionan con PHP 8.3). Ubuntu 24.04 y 22.04 traen una versión anterior, así que primero se agrega el repositorio con PHP actualizado:
 
 ```bash
-sudo apt update
-sudo apt install -y php-cli php-mysql php-xml php-mbstring php-curl php-zip php-bcmath php-intl unzip git composer
+sudo add-apt-repository ppa:ondrej/php -y && sudo apt update
+sudo apt install -y php8.4-cli php8.4-mysql php8.4-sqlite3 php8.4-xml php8.4-mbstring php8.4-curl php8.4-zip php8.4-bcmath php8.4-intl unzip git composer
+sudo update-alternatives --set php /usr/bin/php8.4
 ```
 
 Comprueba las versiones:
 
 ```bash
-php -v          # debe decir PHP 8.3 o superior
+php -v          # debe decir PHP 8.4 o superior
 composer -V
 git --version
 ```
-
-> [!TIP]
-> En **Ubuntu 22.04**, `apt` instala PHP 8.1, que no alcanza. Primero agrega el repositorio de PHP actualizado y después instala PHP 8.3:
-> ```bash
-> sudo add-apt-repository ppa:ondrej/php -y && sudo apt update
-> sudo apt install -y php8.3-cli php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl unzip git composer
-> ```
 
 ### 3. Descargar el proyecto e instalar sus librerías
 
@@ -287,10 +281,10 @@ Escribe `exit` para salir.
 
 | Problema | Solución |
 |---|---|
-| `could not find driver` | Falta la extensión de MySQL para PHP: `sudo apt install php-mysql` (o `php8.3-mysql`). |
+| `could not find driver` | Falta la extensión de MySQL para PHP: `sudo apt install php8.4-mysql`. |
 | `SQLSTATE[HY000] [2002] Connection refused` | XAMPP está apagado: `sudo /opt/lampp/lampp start`. |
 | `Access denied for user 'root'` | Escribe la contraseña de `root` en `DB_PASSWORD` del archivo `.env`. |
-| `Your PHP version does not satisfy that requirement` | Tu PHP es anterior a 8.3; sigue el recuadro para Ubuntu 22.04 del paso 2. |
+| `Your PHP version does not satisfy that requirement` | Tu PHP es anterior a 8.4; repite el paso 2. En Windows, elige PHP 8.4 en Laravel Herd. |
 | `Base table or view already exists` | Ya existían tablas creadas con el script SQL. Ejecuta `php artisan db:wipe` y luego `php artisan migrate --seed`. |
 | `Unknown database 'sistema_pedidos'` | No se creó la base de datos. Créala en phpMyAdmin (paso 5) o ejecuta `php artisan migrate` sin `--seed` y responde **yes** cuando pregunte si quieres crearla. |
 
