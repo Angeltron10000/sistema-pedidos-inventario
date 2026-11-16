@@ -24,7 +24,7 @@ class AccionesPedido
             ->label(fn (Pedido $record): string => 'Pasar a ' . ($record->siguienteEstado()?->nombre ?? ''))
             ->icon('heroicon-o-arrow-right-circle')
             ->color('success')
-            ->visible(fn (Pedido $record): bool => $record->siguienteEstado() !== null)
+            ->visible(fn (Pedido $record): bool => auth()->user()?->can('avanzar', $record) ?? false)   // RN-08 y RN-25
             ->requiresConfirmation()
             ->modalHeading(fn (Pedido $record): string => "Cambiar estado del pedido {$record->folio}")
             ->modalDescription(fn (Pedido $record): string => "El pedido pasará de \"{$record->estado->nombre}\" a \"{$record->siguienteEstado()?->nombre}\".")
@@ -40,6 +40,18 @@ class AccionesPedido
     }
 
     /**
+     * Botón que abre el comprobante del pedido en otra pestaña, listo para imprimir (RF-29).
+     */
+    public static function comprobante(): Action
+    {
+        return Action::make('comprobante')
+            ->label('Comprobante')
+            ->icon('heroicon-o-printer')
+            ->color('gray')
+            ->url(fn (Pedido $record): string => route('pedidos.comprobante', $record), shouldOpenInNewTab: true);
+    }
+
+    /**
      * Botón que cancela el pedido, pide el motivo y regresa las existencias.
      */
     public static function cancelar(): Action
@@ -48,7 +60,7 @@ class AccionesPedido
             ->label('Cancelar')
             ->icon('heroicon-o-x-circle')
             ->color('danger')
-            ->visible(fn (Pedido $record): bool => $record->sePuedeCancelar())
+            ->visible(fn (Pedido $record): bool => auth()->user()?->can('cancelar', $record) ?? false)  // RN-09 y RN-25
             ->modalHeading(fn (Pedido $record): string => "Cancelar el pedido {$record->folio}")
             ->modalDescription('Los productos del pedido regresarán al inventario.')
             ->schema([

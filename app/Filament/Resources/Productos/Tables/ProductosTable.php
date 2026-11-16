@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Productos\Tables;
 
+use App\Filament\Actions\AccionesInventario;
 use App\Filament\Actions\CambiarActivoAction;
+use Filament\Actions\ActionGroup;
 use App\Models\Producto;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -82,7 +84,11 @@ class ProductosTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                CambiarActivoAction::make(),        // en lugar de "Eliminar"
+                AccionesInventario::entrada(),      // RF-16 (solo Administrador)
+                ActionGroup::make([
+                    AccionesInventario::ajuste(),   // RF-17, RN-23 (solo Administrador)
+                    CambiarActivoAction::make(),    // en lugar de "Eliminar"
+                ]),
             ]);
     }
 }

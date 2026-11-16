@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Configuracion;
 use App\Models\EstadoPedido;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\Rol;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -27,11 +29,26 @@ class PedidoService
      */
     public function crear(array $datos, Usuario $usuario): Pedido
     {
+        // RN-25: solo Cajero/Mesero o Administrador registran pedidos
+        if (! $usuario->tieneRol(Rol::ADMINISTRADOR, Rol::CAJERO)) {
+            throw ValidationException::withMessages([
+                'data.productos' => 'Tu rol no puede registrar pedidos.',
+            ]);
+        }
+
+        // RN-27: solo dentro del horario de servicio
+        $configuracion = Configuracion::actual();
+        if (! $configuracion->estaAbierto()) {
+            throw ValidationException::withMessages([
+                'data.productos' => 'Fuera del horario de servicio (' . $configuracion->textoHorario() . '). No se pueden registrar pedidos ahora.',
+            ]);
+        }
+
         $renglones = $this->agruparProductos($datos['productos'] ?? []);
 
         if ($renglones === []) {
             throw ValidationException::withMessages([
-                'data.productos' => 'Agrega al menos un producto al pedido.',
+                'data.productos' => 'Agrega al menos un producto al pedido.',     // RN-02
             ]);
         }
 
@@ -110,6 +127,139 @@ class PedidoService
     }
 
     /**
+     * Modifica un pedido que sigue en "Recibido": datos generales y productos (RN-11, RF-30).
+     *
+     * Por cada producto se compara la cantidad anterior con la nueva:
+     * - Si aumenta (o es un producto nuevo): se valida la existencia y se descuenta (salida).
+     * - Si disminuye (o se quitó): las piezas regresan al inventario (entrada).
+     * Los productos que ya estaban conservan el precio con el que se registraron (RN-13);
+     * los nuevos toman el precio actual del menú.
+     */
+    public function actualizar(Pedido $pedido, array $datos, Usuario $usuario): Pedido
+    {
+        if (! $pedido->sePuedeEditar()) {
+            throw ValidationException::withMessages([
+                'data.productos' => 'Solo se pueden modificar pedidos en estado "Recibido".',   // RN-10, RN-11
+            ]);
+        }
+
+        if (! $usuario->tieneRol(Rol::ADMINISTRADOR, Rol::CAJERO)) {
+            throw ValidationException::withMessages([
+                'data.productos' => 'Tu rol no puede modificar pedidos.',
+            ]);
+        }
+
+        $renglones = $this->agruparProductos($datos['productos'] ?? []);
+
+        if ($renglones === []) {
+            throw ValidationException::withMessages([
+                'data.productos' => 'El pedido debe tener al menos un producto.',      // RN-02
+            ]);
+        }
+
+        return DB::transaction(function () use ($pedido, $datos, $renglones, $usuario) {
+            $anteriores = $pedido->detalles()->get()->keyBy('id_producto');
+            $ids = $anteriores->keys()->merge(array_keys($renglones))->unique()->values();
+
+            $productos = Producto::whereIn('id_producto', $ids)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id_producto');
+
+            // 1) Validar antes de cambiar nada (RN-04, RN-19)
+            $errores = [];
+            foreach ($renglones as $idProducto => $renglon) {
+                $producto = $productos->get($idProducto);
+                $cantidadAnterior = (int) ($anteriores->get($idProducto)?->cantidad ?? 0);
+                $diferencia = $renglon['cantidad'] - $cantidadAnterior;
+
+                if (! $producto || ($cantidadAnterior === 0 && ! $producto->activo)) {
+                    $errores[] = 'Un producto seleccionado ya no está disponible.';
+                } elseif ($diferencia > $producto->existencia) {
+                    $maximo = $cantidadAnterior + $producto->existencia;
+                    $errores[] = "No hay suficiente {$producto->nombre}: el máximo para este pedido es {$maximo}.";
+                }
+            }
+            if ($errores !== []) {
+                throw ValidationException::withMessages(['data.productos' => implode(' ', $errores)]);
+            }
+
+            // 2) Datos generales
+            $pedido->update([
+                'id_cliente'    => $datos['id_cliente'] ?? $pedido->id_cliente,
+                'tipo_servicio' => $datos['tipo_servicio'] ?? $pedido->tipo_servicio,
+                'observaciones' => $datos['observaciones'] ?? null,
+            ]);
+
+            // 3) Productos e inventario
+            foreach ($ids as $idProducto) {
+                $producto = $productos->get($idProducto);
+                $detalle = $anteriores->get($idProducto);
+                $cantidadAnterior = (int) ($detalle?->cantidad ?? 0);
+                $cantidadNueva = (int) ($renglones[$idProducto]['cantidad'] ?? 0);
+                $diferencia = $cantidadNueva - $cantidadAnterior;
+
+                if ($diferencia > 0) {
+                    $pedido->movimientos()->create([
+                        'id_producto' => $idProducto,
+                        'id_usuario'  => $usuario->id_usuario,
+                        'tipo'        => 'salida',
+                        'cantidad'    => $diferencia,
+                        'fecha_hora'  => now(),
+                        'motivo'      => "Salida por modificación de {$pedido->folio}",
+                    ]);
+                    $producto->decrement('existencia', $diferencia);
+                } elseif ($diferencia < 0) {
+                    $pedido->movimientos()->create([
+                        'id_producto' => $idProducto,
+                        'id_usuario'  => $usuario->id_usuario,
+                        'tipo'        => 'entrada',
+                        'cantidad'    => -$diferencia,
+                        'fecha_hora'  => now(),
+                        'motivo'      => "Reintegro por modificación de {$pedido->folio}",
+                    ]);
+                    $producto->increment('existencia', -$diferencia);
+                }
+
+                if ($cantidadNueva === 0) {
+                    $detalle?->delete();                                   // se quitó del pedido
+                } elseif ($detalle) {
+                    $detalle->update([
+                        'cantidad' => $cantidadNueva,
+                        'subtotal' => $cantidadNueva * $detalle->precio_unitario,   // precio congelado (RN-13)
+                        'notas'    => $renglones[$idProducto]['notas'],
+                    ]);
+                } else {
+                    $pedido->detalles()->create([
+                        'id_producto'     => $idProducto,
+                        'cantidad'        => $cantidadNueva,
+                        'precio_unitario' => $producto->precio,
+                        'subtotal'        => $cantidadNueva * $producto->precio,
+                        'notas'           => $renglones[$idProducto]['notas'],
+                    ]);
+                }
+            }
+
+            $pedido->update(['total' => $pedido->detalles()->sum('subtotal')]);   // RN-15
+
+            return $pedido->refresh();
+        });
+    }
+
+    /**
+     * Productos del pedido que quedaron con stock bajo o agotados (para avisar, RF-21).
+     *
+     * @return \Illuminate\Support\Collection<int, Producto>
+     */
+    public function productosConStockBajo(Pedido $pedido)
+    {
+        return Producto::stockBajo()
+            ->whereIn('id_producto', $pedido->detalles()->pluck('id_producto'))
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    /**
      * Pasa el pedido al siguiente estado: Recibido → En preparación → Listo → Entregado (RN-08).
      */
     public function avanzarEstado(Pedido $pedido, Usuario $usuario): Pedido
@@ -119,6 +269,13 @@ class PedidoService
         if (! $siguiente) {
             throw ValidationException::withMessages([
                 'estado' => 'Este pedido ya no puede cambiar de estado.',
+            ]);
+        }
+
+        // RN-25: Cocina prepara (Recibido → En preparación → Listo); Cajero/Mesero entrega (Listo → Entregado)
+        if (! $pedido->puedeAvanzarPor($usuario)) {
+            throw ValidationException::withMessages([
+                'estado' => 'Tu rol no puede hacer este cambio de estado.',
             ]);
         }
 
@@ -142,6 +299,12 @@ class PedidoService
         if (! $pedido->sePuedeCancelar()) {
             throw ValidationException::withMessages([
                 'estado' => 'Solo se pueden cancelar pedidos en estado Recibido o En preparación.',
+            ]);
+        }
+
+        if (! $pedido->puedeCancelarPor($usuario)) {
+            throw ValidationException::withMessages([
+                'estado' => 'Tu rol no puede cancelar pedidos.',
             ]);
         }
 

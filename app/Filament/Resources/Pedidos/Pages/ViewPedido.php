@@ -12,13 +12,15 @@ class ViewPedido extends ViewRecord
 {
     protected static string $resource = PedidoResource::class;
 
-    /** Botones del detalle: avanzar estado, editar y cancelar. */
+    /** Botones del detalle: avanzar estado, comprobante, modificar y cancelar. */
     protected function getHeaderActions(): array
     {
         return [
             AccionesPedido::avanzar(),
+            AccionesPedido::comprobante(),
             EditAction::make()
-                ->visible(fn (Pedido $record): bool => $record->sePuedeEditar()),
+                ->label('Modificar')
+                ->visible(fn (Pedido $record): bool => auth()->user()?->can('update', $record) ?? false),
             AccionesPedido::cancelar(),
         ];
     }

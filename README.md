@@ -19,7 +19,7 @@ Sistema para organizar y controlar el proceso de pedidos de un establecimiento d
 |---|---|---|
 | [Laravel](https://laravel.com) | 13.x | Framework de PHP: migraciones, modelos y datos de prueba. |
 | [Filament](https://filamentphp.com) | 5.x | Panel administrativo: recursos, formularios y tablas (CRUD). |
-| PHP | 8.3 o superior | Lenguaje en el que está hecho Laravel. |
+| PHP | 8.4 o superior | Lenguaje en el que está hecho Laravel. |
 | [Composer](https://getcomposer.org) | 2.x | Descarga las librerías que necesita Laravel. |
 | [Laravel Herd](https://herd.laravel.com) (Windows) | 1.x | Trae PHP y Composer; con **SQLite** como base de datos. Es lo que se usa en la escuela. |
 | XAMPP (MariaDB) (Ubuntu) | 8.2 o superior | Servidor de base de datos y phpMyAdmin. |
@@ -95,9 +95,41 @@ Se entra en `/admin` con un usuario de la tabla `usuario` (ver [Usuarios de prue
 - **Validaciones**: los formularios repiten las reglas de la base de datos (precio mayor que 0, cantidad de al menos 1, existencia no negativa), así se cumplen también en SQLite.
 - **Cambios a la base de datos (Evaluación 1)**: campo `activo` en `categoria` (RF-10) y `cliente`, y campo `motivo_cancelacion` en `pedido` (RF-31).
 
+### Funciones completas de la planeación
+
+| Pantalla (menú) | Qué hace | Requisitos y reglas |
+|---|---|---|
+| **Escritorio** | Indicadores del día: pedidos, por preparar, listos, ventas y stock bajo; tabla de productos por resurtir; gráfica de ventas de 7 días | RF-38, RF-21 |
+| **Tablero de cocina** | Pedidos activos en tres columnas (Recibido, En preparación, Listo), con tiempo de espera; se actualiza solo cada 15 s | RF-36, RF-37 |
+| **Pedidos** | Registrar (buscar cliente por nombre o teléfono, botón + para cliente nuevo), modificar productos mientras está en "Recibido", comprobante para imprimir, tiempo de espera, filtros por estado, fecha, cliente y servicio | RF-23 a RF-37, RN-01 a RN-15, RN-26, RN-27 |
+| **Productos** | Botones **Registrar entrada** (resurtido) y **Ajustar existencia** (merma o conteo, con motivo); movimientos de cada producto; número rojo en el menú con los productos en stock bajo | RF-16, RF-17, RF-20, RF-21, RN-20, RN-22, RN-23 |
+| **Movimientos de inventario** | Historial de entradas, salidas y ajustes, con filtros por producto, tipo, fecha y usuario | RF-22 |
+| **Reportes** | Ventas por día o periodo, productos más vendidos, pedidos por estado e inventario por resurtir (en pantalla) | RF-39 a RF-42 |
+| **Usuarios** | Alta, consulta, edición, rol y desactivar empleados | RF-04 a RF-07 |
+| **Configuración** | Nombre del negocio y horario de servicio (por defecto 8:00 a 22:00) | RN-27 |
+| **Cambiar contraseña** (menú del usuario, arriba a la derecha) | Cada usuario cambia su contraseña escribiendo la actual | RF-08 |
+
+**Permisos por rol (RN-25, RF-03)** — el menú y los botones cambian según el rol:
+
+| Función | Administrador | Cajero/Mesero | Cocina |
+|---|:---:|:---:|:---:|
+| Registrar, modificar y cancelar pedidos | ✔ | ✔ | — |
+| Pasar a "En preparación" y "Listo" | ✔ | — | ✔ |
+| Entregar pedidos ("Listo" → "Entregado") | ✔ | ✔ | — |
+| Ver pedidos y tablero de cocina | ✔ | ✔ | ✔ |
+| Registrar y editar clientes | ✔ | ✔ | — |
+| Consultar productos | ✔ | ✔ | — |
+| Categorías, productos (editar), entradas y ajustes | ✔ | — | — |
+| Movimientos, reportes, usuarios y configuración | ✔ | — | — |
+
+Los permisos están en `app/Policies`. Las reglas de pedidos e inventario están en `app/Services/PedidoService.php` e `app/Services/InventarioService.php`.
+
+- **Cambio a la base de datos**: tabla nueva `configuracion` (nombre del negocio y horario de servicio). Después de descargar los cambios hay que ejecutar `php artisan migrate`.
+- **Pruebas automáticas**: `php artisan test` revisa las reglas de negocio y las pantallas (32 pruebas, usan una base temporal y no tocan los datos).
+
 ## Instalación en Windows con Laravel Herd (SQLite)
 
-Requisitos: [Laravel Herd](https://herd.laravel.com/windows) y [Git para Windows](https://git-scm.com/download/win). Los comandos se escriben en **PowerShell**.
+Requisitos: [Laravel Herd](https://herd.laravel.com/windows) con **PHP 8.4 o superior** y [Git para Windows](https://git-scm.com/download/win). Los comandos se escriben en **PowerShell**.
 
 ```powershell
 cd $HOME\Herd
@@ -140,27 +172,21 @@ sudo /opt/lampp/lampp start
 
 ### 2. Instalar PHP, Composer y Git (solo la primera vez)
 
-Laravel 13 necesita **PHP 8.3 o superior**. En **Ubuntu 24.04** se instala así:
+El proyecto necesita **PHP 8.4 o superior** (sus librerías, como Symfony 8, ya no funcionan con PHP 8.3). Ubuntu 24.04 y 22.04 traen una versión anterior, así que primero se agrega el repositorio con PHP actualizado:
 
 ```bash
-sudo apt update
-sudo apt install -y php-cli php-mysql php-xml php-mbstring php-curl php-zip php-bcmath php-intl unzip git composer
+sudo add-apt-repository ppa:ondrej/php -y && sudo apt update
+sudo apt install -y php8.4-cli php8.4-mysql php8.4-sqlite3 php8.4-xml php8.4-mbstring php8.4-curl php8.4-zip php8.4-bcmath php8.4-intl unzip git composer
+sudo update-alternatives --set php /usr/bin/php8.4
 ```
 
 Comprueba las versiones:
 
 ```bash
-php -v          # debe decir PHP 8.3 o superior
+php -v          # debe decir PHP 8.4 o superior
 composer -V
 git --version
 ```
-
-> [!TIP]
-> En **Ubuntu 22.04**, `apt` instala PHP 8.1, que no alcanza. Primero agrega el repositorio de PHP actualizado y después instala PHP 8.3:
-> ```bash
-> sudo add-apt-repository ppa:ondrej/php -y && sudo apt update
-> sudo apt install -y php8.3-cli php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl unzip git composer
-> ```
 
 ### 3. Descargar el proyecto e instalar sus librerías
 
@@ -255,10 +281,10 @@ Escribe `exit` para salir.
 
 | Problema | Solución |
 |---|---|
-| `could not find driver` | Falta la extensión de MySQL para PHP: `sudo apt install php-mysql` (o `php8.3-mysql`). |
+| `could not find driver` | Falta la extensión de MySQL para PHP: `sudo apt install php8.4-mysql`. |
 | `SQLSTATE[HY000] [2002] Connection refused` | XAMPP está apagado: `sudo /opt/lampp/lampp start`. |
 | `Access denied for user 'root'` | Escribe la contraseña de `root` en `DB_PASSWORD` del archivo `.env`. |
-| `Your PHP version does not satisfy that requirement` | Tu PHP es anterior a 8.3; sigue el recuadro para Ubuntu 22.04 del paso 2. |
+| `Your PHP version does not satisfy that requirement` | Tu PHP es anterior a 8.4; repite el paso 2. En Windows, elige PHP 8.4 en Laravel Herd. |
 | `Base table or view already exists` | Ya existían tablas creadas con el script SQL. Ejecuta `php artisan db:wipe` y luego `php artisan migrate --seed`. |
 | `Unknown database 'sistema_pedidos'` | No se creó la base de datos. Créala en phpMyAdmin (paso 5) o ejecuta `php artisan migrate` sin `--seed` y responde **yes** cuando pregunte si quieres crearla. |
 
@@ -301,7 +327,7 @@ Todos tienen la contraseña **`Prueba123`** (guardada cifrada con bcrypt).
 - [x] Scripts SQL y casos de prueba
 - [x] Migraciones, modelos con relaciones y datos de prueba en Laravel
 - [x] Panel administrativo con Filament 5: recursos y CRUD de categorías, productos, clientes y pedidos (Evaluación 1)
-- [ ] Usuarios, movimientos de inventario, permisos por rol y reportes
+- [x] Usuarios, movimientos de inventario, permisos por rol, tablero de cocina, indicadores y reportes (todas las funciones de la planeación)
 
 ## Licencia
 

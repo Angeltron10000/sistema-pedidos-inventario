@@ -9,6 +9,7 @@ use App\Filament\Resources\Productos\Pages\ViewProducto;
 use App\Filament\Resources\Productos\Schemas\ProductoForm;
 use App\Filament\Resources\Productos\Schemas\ProductoInfolist;
 use App\Filament\Resources\Productos\Tables\ProductosTable;
+use App\Filament\Resources\Productos\RelationManagers\MovimientosRelationManager;
 use App\Models\Producto;
 use BackedEnum;
 use UnitEnum;
@@ -53,8 +54,29 @@ class ProductoResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            MovimientosRelationManager::class,      // movimientos del producto (RF-22)
         ];
+    }
+
+    /**
+     * Número rojo junto a "Productos" en el menú: cuántos productos activos
+     * tienen stock bajo o están agotados (alerta de stock, RF-21, RN-20).
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $cantidad = Producto::stockBajo()->count();
+
+        return $cantidad > 0 ? (string) $cantidad : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'danger';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Productos con stock bajo o agotados';
     }
 
     public static function getPages(): array

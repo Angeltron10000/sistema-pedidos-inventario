@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Productos\Pages;
 
 use App\Filament\Resources\Productos\ProductoResource;
+use App\Filament\Actions\AccionesInventario;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -13,6 +14,8 @@ class ViewProducto extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            AccionesInventario::entrada(),
+            AccionesInventario::ajuste(),
             EditAction::make(),
         ];
     }

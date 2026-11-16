@@ -127,10 +127,75 @@ class Pedido extends Model
     }
 
     /**
-     * Los datos generales del pedido solo se editan mientras está en "Recibido" (RN-11).
+     * El pedido (datos y productos) solo se modifica mientras está en "Recibido" (RN-10, RN-11).
      */
     public function sePuedeEditar(): bool
     {
         return $this->estado?->orden === 1;
+    }
+
+    /**
+     * ¿Este usuario puede pasar el pedido al siguiente estado? (RN-08 y RN-25)
+     * - Recibido → En preparación y En preparación → Listo: Cocina o Administrador.
+     * - Listo → Entregado: Cajero/Mesero o Administrador.
+     */
+    public function puedeAvanzarPor(?Usuario $usuario): bool
+    {
+        if (! $usuario || ! $this->siguienteEstado()) {
+            return false;
+        }
+
+        return match ($this->estado?->orden) {
+            1, 2    => $usuario->tieneRol(Rol::ADMINISTRADOR, Rol::COCINA),
+            3       => $usuario->tieneRol(Rol::ADMINISTRADOR, Rol::CAJERO),
+            default => false,
+        };
+    }
+
+    /**
+     * ¿Este usuario puede cancelar el pedido? Cajero/Mesero o Administrador,
+     * y solo en "Recibido" o "En preparación" (RN-09, RN-25).
+     */
+    public function puedeCancelarPor(?Usuario $usuario): bool
+    {
+        return $usuario !== null
+            && $this->sePuedeCancelar()
+            && $usuario->tieneRol(Rol::ADMINISTRADOR, Rol::CAJERO);
+    }
+
+    /**
+     * ¿El pedido sigue abierto? (Recibido, En preparación o Listo)
+     */
+    public function estaActivo(): bool
+    {
+        return in_array($this->estado?->orden, [1, 2, 3], true);
+    }
+
+    /**
+     * Tiempo de espera desde que se recibió el pedido (RF-37).
+     * Mientras está activo se cuenta hasta este momento; si ya se entregó o canceló,
+     * hasta su último cambio de estado. Ejemplo: "25 min" o "1 h 10 min".
+     */
+    public function tiempoDeEspera(): string
+    {
+        $fin = $this->estaActivo()
+            ? now()
+            : ($this->historial->last()?->fecha_hora ?? now());
+
+        $minutos = max(0, (int) $this->fecha_hora->diffInMinutes($fin));
+
+        if ($minutos < 60) {
+            return "{$minutos} min";
+        }
+
+        return intdiv($minutos, 60) . ' h ' . ($minutos % 60) . ' min';
+    }
+
+    /**
+     * Minutos que lleva esperando un pedido activo (para marcar en rojo los que tardan).
+     */
+    public function minutosDeEspera(): int
+    {
+        return max(0, (int) $this->fecha_hora->diffInMinutes(now()));
     }
 }

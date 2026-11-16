@@ -91,6 +91,30 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
+     * ¿El usuario tiene alguno de estos roles? (RN-25)
+     * Uso: $usuario->tieneRol(Rol::ADMINISTRADOR, Rol::CAJERO)
+     */
+    public function tieneRol(int ...$roles): bool
+    {
+        return in_array((int) $this->id_rol, $roles, true);
+    }
+
+    public function esAdministrador(): bool
+    {
+        return $this->tieneRol(Rol::ADMINISTRADOR);
+    }
+
+    public function esCajero(): bool
+    {
+        return $this->tieneRol(Rol::CAJERO);
+    }
+
+    public function esCocina(): bool
+    {
+        return $this->tieneRol(Rol::COCINA);
+    }
+
+    /**
      * Cada usuario tiene un solo rol (USUARIO N : 1 ROL).
      */
     public function rol(): BelongsTo
