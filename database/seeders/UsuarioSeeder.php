@@ -36,5 +36,9 @@ class UsuarioSeeder extends Seeder
                 'activo'          => $activo,
             ]);
         }
+
+        // Usuario del rol "Cliente" (id 7): no entra al panel. Con él queda anotado en el
+        // historial cuando un cliente cancela su pedido desde la página de consulta.
+        Usuario::cuentaConsultaCliente();
     }
 }

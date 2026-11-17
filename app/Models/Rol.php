@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Tipos de usuario del sistema (Administrador, Cajero/Mesero, Cocina).
+ * Tipos de usuario del sistema (Administrador, Cajero/Mesero, Cocina y Cliente).
  */
 class Rol extends Model
 {
@@ -19,6 +19,12 @@ class Rol extends Model
     public const CAJERO = 2;            // Cajero/Mesero
 
     public const COCINA = 3;
+
+    /**
+     * Cliente: consulta su pedido en la página de consulta (folio + código) y puede
+     * cancelarlo mientras está en "Recibido". No entra al panel de Filament.
+     */
+    public const CLIENTE = 4;
 
     /** Nombre de la tabla en la base de datos. */
     protected $table = 'rol';

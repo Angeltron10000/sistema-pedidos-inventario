@@ -8,6 +8,8 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Empleados que utilizan el sistema; cada uno tiene un rol.
@@ -16,6 +18,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  */
 class Usuario extends Authenticatable implements FilamentUser, HasName
 {
+    /**
+     * Usuario del rol "Cliente" que usa la página de consulta del pedido.
+     * Con él queda anotado en el historial que fue el cliente quien canceló su pedido.
+     */
+    public const USUARIO_CONSULTA_CLIENTE = 'consulta-cliente';
+
     /** Nombre de la tabla en la base de datos. */
     protected $table = 'usuario';
 
@@ -58,10 +66,37 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
 
     /**
      * Solo los usuarios activos pueden entrar al panel de Filament (RN-24).
+     * El rol "Cliente" nunca entra al panel: los clientes usan la página de consulta.
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->activo;
+        return $this->activo && ! $this->esCliente();
+    }
+
+    /**
+     * Usuario del rol "Cliente" con el que se registran las cancelaciones que hace
+     * el propio cliente desde la página de consulta. Si no existe, se crea.
+     */
+    public static function cuentaConsultaCliente(): self
+    {
+        if (! Rol::whereKey(Rol::CLIENTE)->exists()) {
+            Rol::forceCreate([
+                'id_rol'      => Rol::CLIENTE,
+                'nombre'      => 'Cliente',
+                'descripcion' => 'Consulta su pedido con folio y código; no entra al panel',
+            ]);
+        }
+
+        return static::firstOrCreate(
+            ['usuario' => self::USUARIO_CONSULTA_CLIENTE],
+            [
+                'id_rol'          => Rol::CLIENTE,
+                'nombre'          => 'Cliente',
+                'apellidos'       => '(consulta en línea)',
+                'contrasena_hash' => Hash::make(Str::random(40)),     // nadie la conoce: no se puede iniciar sesión con él
+                'activo'          => true,
+            ],
+        );
     }
 
     /**
@@ -112,6 +147,11 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
     public function esCocina(): bool
     {
         return $this->tieneRol(Rol::COCINA);
+    }
+
+    public function esCliente(): bool
+    {
+        return $this->tieneRol(Rol::CLIENTE);
     }
 
     /**

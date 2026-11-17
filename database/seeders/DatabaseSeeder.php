@@ -15,10 +15,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            RolSeeder::class,               // 3 roles
+            RolSeeder::class,               // 4 roles (incluye Cliente)
             EstadoPedidoSeeder::class,      // 5 estados del pedido
             ClienteSeeder::class,           // 5 clientes (incluye "Público en general")
-            UsuarioSeeder::class,           // 6 usuarios (1 inactivo)
+            UsuarioSeeder::class,           // 7 usuarios (1 inactivo + el de consulta del cliente)
             CategoriaSeeder::class,         // 6 categorías
             ProductoSeeder::class,          // 21 productos + inventario inicial
             PedidoSeeder::class,            // 19 pedidos con detalle, historial y movimientos

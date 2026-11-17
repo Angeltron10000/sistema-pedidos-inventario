@@ -6,6 +6,7 @@ use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 
 /**
  * Página de detalle (Ver) de un cliente.
@@ -19,6 +20,9 @@ class ClienteInfolist
             ->components([
                 Section::make('Cliente')
                     ->schema([
+                        TextEntry::make('numero')
+                            ->label('Número de cliente')
+                            ->weight(FontWeight::Bold),
                         TextEntry::make('nombre')
                             ->label('Nombre'),
                         TextEntry::make('telefono')
@@ -33,7 +37,7 @@ class ClienteInfolist
                             ->placeholder('Sin pedidos')
                             ->columnSpanFull(),
                     ])
-                    ->columns(3),
+                    ->columns(4),
             ]);
     }
 }

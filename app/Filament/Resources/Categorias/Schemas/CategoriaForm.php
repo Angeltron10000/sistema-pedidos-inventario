@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Categorias\Schemas;
 
+use App\Models\Categoria;
+use Closure;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -25,10 +27,16 @@ class CategoriaForm
                             ->placeholder('Ejemplo: Desayunos')
                             ->required()
                             ->maxLength(50)
-                            ->unique(ignoreRecord: true)
-                            ->validationMessages([
-                                'unique' => 'Ya existe una categoría con ese nombre.',
-                            ]),
+                            // No puede haber dos categorías con el mismo nombre.
+                            // Se compara sin importar mayúsculas ni los caracteres invisibles
+                            // que trae a veces el texto copiado y pegado (ver App\Support\Texto).
+                            ->rule(fn (?Categoria $record): Closure => function (string $attribute, $value, Closure $fail) use ($record): void {
+                                $repetida = Categoria::otraConNombre($value, $record?->id_categoria);
+
+                                if ($repetida) {
+                                    $fail("Ya existe una categoría con ese nombre ({$repetida->nombre}).");
+                                }
+                            }),
                         Toggle::make('activo')
                             ->label('Categoría activa')
                             ->helperText('Si se desactiva, sus productos ya no se pueden elegir al registrar productos nuevos.')

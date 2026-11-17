@@ -24,6 +24,7 @@ class UsuariosTable
             'Administrador' => 'danger',
             'Cajero/Mesero' => 'info',
             'Cocina'        => 'warning',
+            'Cliente'       => 'success',
             default         => 'gray',
         };
     }

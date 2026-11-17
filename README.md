@@ -125,7 +125,18 @@ Se entra en `/admin` con un usuario de la tabla `usuario` (ver [Usuarios de prue
 Los permisos están en `app/Policies`. Las reglas de pedidos e inventario están en `app/Services/PedidoService.php` e `app/Services/InventarioService.php`.
 
 - **Cambio a la base de datos**: tabla nueva `configuracion` (nombre del negocio y horario de servicio). Después de descargar los cambios hay que ejecutar `php artisan migrate`.
-- **Pruebas automáticas**: `php artisan test` revisa las reglas de negocio y las pantallas (32 pruebas, usan una base temporal y no tocan los datos).
+- **Pruebas automáticas**: `php artisan test` revisa las reglas de negocio y las pantallas (55 pruebas, usan una base temporal y no tocan los datos).
+
+### Ajustes después de la presentación
+
+| Ajuste | Qué hace |
+|---|---|
+| **Nombres repetidos** | Productos y categorías no se pueden repetir aunque el nombre se copie y pegue (espacios especiales, caracteres invisibles, acentos armados en dos piezas) o cambien las mayúsculas: "Café americano" = "CAFÉ AMERICANO". Los nombres se guardan limpios (`app/Support/Texto.php`). Tampoco se puede volver a activar un producto si ya hay otro activo con el mismo nombre. |
+| **Número de cliente** | Cada cliente se ve con su número, por ejemplo **CLI-0007** (sale de `id_cliente`). Al elegir el cliente de un pedido se ve "Nombre · teléfono · CLI-0007" y se puede buscar por cualquiera de los tres. |
+| **Clientes con el mismo nombre o teléfono** | Sí se pueden guardar (dos personas pueden llamarse igual o compartir el teléfono de su casa), pero el sistema muestra un aviso amarillo para no registrar dos veces a la misma persona. |
+| **Rol "Cliente" y consulta del pedido** | Cada pedido tiene un **código de consulta** de 4 caracteres (por ejemplo K7P2) impreso en su comprobante. En **`/consulta`** el cliente escribe su folio y su código, sin crear cuenta, y ve su comprobante con una barra de avance (Recibido → En preparación → Listo → Entregado) que se actualiza sola cada 10 segundos. Mientras el pedido está en "Recibido" puede **cancelarlo**: las existencias regresan al inventario y en el historial queda el usuario "Cliente (consulta en línea)". Solo ve su pedido. Hay un enlace "¿Eres cliente?" debajo del inicio de sesión. |
+
+- **Cambio a la base de datos**: campo nuevo `codigo_consulta` en `pedido`, rol **Cliente** (id 4) y su usuario `consulta-cliente`, que no puede entrar al panel. Después de descargar los cambios hay que ejecutar `php artisan migrate` (los pedidos que ya existían reciben su código).
 
 ## Instalación en Windows con Laravel Herd (SQLite)
 
@@ -235,7 +246,7 @@ En phpMyAdmin (<http://localhost/phpmyadmin>) → **Nueva** → nombre `sistema_
 php artisan migrate --seed
 ```
 
-Esto crea las 10 tablas y las llena con: 3 roles, 5 estados, 5 clientes, 6 usuarios, 6 categorías, 21 productos, 19 pedidos con su detalle e historial y 82 movimientos de inventario.
+Esto crea las 11 tablas y las llena con: 4 roles, 5 estados, 5 clientes, 7 usuarios, 6 categorías, 21 productos, 19 pedidos con su detalle e historial y 82 movimientos de inventario.
 
 Para **borrar todo y volver a empezar** con los datos originales:
 
@@ -249,7 +260,7 @@ php artisan migrate:fresh --seed
 php artisan migrate:status
 ```
 
-Deben aparecer las 13 migraciones con estado **Ran**. Después abre phpMyAdmin y revisa las tablas de `sistema_pedidos`. Para pruebas más completas, sigue los [casos de prueba](docs/casos-de-prueba.md).
+Deben aparecer las 15 migraciones con estado **Ran**. Después abre phpMyAdmin y revisa las tablas de `sistema_pedidos`. Para pruebas más completas, sigue los [casos de prueba](docs/casos-de-prueba.md).
 
 Para abrir el panel administrativo:
 
@@ -316,6 +327,9 @@ Todos tienen la contraseña **`Prueba123`** (guardada cifrada con bcrypt).
 | `jperez`, `mlopez` | Cajero/Mesero | Activo |
 | `rramirez`, `agarcia` | Cocina | Activo |
 | `rtorres` | Cajero/Mesero | Inactivo (para probar el bloqueo de acceso) |
+| `consulta-cliente` | Cliente | Del sistema: no entra al panel; registra las cancelaciones que hace el cliente en `/consulta` |
+
+Los **clientes** no tienen cuenta: entran a `/consulta` con el folio y el código de consulta de su comprobante (el código también se ve en el detalle del pedido).
 
 > [!CAUTION]
 > Estas cuentas son solo para pruebas. No las uses en un entorno real.
@@ -328,6 +342,7 @@ Todos tienen la contraseña **`Prueba123`** (guardada cifrada con bcrypt).
 - [x] Migraciones, modelos con relaciones y datos de prueba en Laravel
 - [x] Panel administrativo con Filament 5: recursos y CRUD de categorías, productos, clientes y pedidos (Evaluación 1)
 - [x] Usuarios, movimientos de inventario, permisos por rol, tablero de cocina, indicadores y reportes (todas las funciones de la planeación)
+- [x] Ajustes después de la presentación: nombres repetidos, número de cliente y consulta del pedido para el cliente
 
 ## Licencia
 

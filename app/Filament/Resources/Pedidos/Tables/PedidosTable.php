@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Pedidos\Tables;
 
 use App\Filament\Actions\AccionesPedido;
+use App\Models\Cliente;
 use App\Models\Pedido;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
@@ -51,6 +52,7 @@ class PedidosTable
                     ->sortable(),
                 TextColumn::make('cliente.nombre')
                     ->label('Cliente')
+                    ->description(fn ($record): ?string => $record->cliente?->numero)   // CLI-0002
                     ->searchable()
                     ->wrap(),
                 TextColumn::make('estado.nombre')
@@ -86,6 +88,7 @@ class PedidosTable
                 SelectFilter::make('id_cliente')
                     ->label('Cliente')
                     ->relationship('cliente', 'nombre')
+                    ->getOptionLabelFromRecordUsing(fn (Cliente $cliente): string => $cliente->etiqueta())
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('tipo_servicio')

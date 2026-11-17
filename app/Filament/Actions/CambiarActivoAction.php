@@ -2,6 +2,7 @@
 
 namespace App\Filament\Actions;
 
+use App\Models\Producto;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,21 @@ class CambiarActivoAction
                 : 'El registro volverá a estar disponible.')
             ->modalSubmitActionLabel(fn (Model $record): string => $record->activo ? 'Sí, desactivar' : 'Sí, activar')
             ->action(function (Model $record): void {
+                // RN-17: al volver a activar un producto, no debe quedar con el mismo nombre que otro activo
+                if ($record instanceof Producto && ! $record->activo) {
+                    $repetido = Producto::otroActivoConNombre($record->nombre, $record->id_producto);
+
+                    if ($repetido) {
+                        Notification::make()
+                            ->title('No se puede activar')
+                            ->body("Ya hay otro producto activo con ese nombre ({$repetido->nombre}). Desactiva o cambia el nombre de uno de los dos.")
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+                }
+
                 $record->update(['activo' => ! $record->activo]);
 
                 Notification::make()

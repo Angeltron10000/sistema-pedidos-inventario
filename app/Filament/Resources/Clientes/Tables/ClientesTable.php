@@ -10,6 +10,8 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use App\Models\Cliente;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Tabla (listado) de clientes.
@@ -22,6 +24,17 @@ class ClientesTable
             ->heading('Clientes')
             ->description('Sistema de Pedidos · Equipo 11')
             ->columns([
+                // Número de cliente (CLI-0007): distingue a dos clientes que se llaman igual
+                TextColumn::make('id_cliente')
+                    ->label('Número')
+                    ->formatStateUsing(fn ($state): string => Cliente::formatoNumero((int) $state))
+                    ->sortable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $id = Cliente::idDesdeNumero($search);
+
+                        return $id ? $query->where('id_cliente', $id) : $query->whereRaw('1 = 0');
+                    })
+                    ->color('gray'),
                 TextColumn::make('nombre')
                     ->label('Nombre')
                     ->searchable()

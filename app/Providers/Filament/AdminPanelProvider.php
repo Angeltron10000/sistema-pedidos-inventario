@@ -18,6 +18,8 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\HtmlString;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -46,6 +48,14 @@ class AdminPanelProvider extends PanelProvider
                 'Administración',
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
+            // Debajo del inicio de sesión: enlace para que el cliente consulte su pedido (rol "Cliente")
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                fn (): HtmlString => new HtmlString(
+                    '<p style="text-align:center; font-size:0.875rem; margin-top:0.5rem;">¿Eres cliente? '
+                    . '<a href="' . e(route('consulta.formulario')) . '" style="color:rgb(234 88 12); font-weight:600;">Consulta tu pedido aquí</a></p>'
+                ),
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
