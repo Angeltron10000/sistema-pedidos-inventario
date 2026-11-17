@@ -25,9 +25,12 @@ class UsuarioPolicy
         return $usuario->esAdministrador();
     }
 
+    /**
+     * El usuario del rol "Cliente" (consulta en línea) es del sistema: no se modifica.
+     */
     public function update(Usuario $usuario, Usuario $registro): bool
     {
-        return $usuario->esAdministrador();
+        return $usuario->esAdministrador() && ! $registro->esCliente();
     }
 
     /**
@@ -36,7 +39,9 @@ class UsuarioPolicy
      */
     public function desactivar(Usuario $usuario, Usuario $registro): bool
     {
-        return $usuario->esAdministrador() && $usuario->id_usuario !== $registro->id_usuario;
+        return $usuario->esAdministrador()
+            && $usuario->id_usuario !== $registro->id_usuario
+            && ! $registro->esCliente();
     }
 
     public function delete(Usuario $usuario, Usuario $registro): bool

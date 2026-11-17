@@ -45,7 +45,7 @@
                                 </x-filament::badge>
                             </div>
                             <div class="tc-fila">
-                                <span class="tc-gris">{{ $pedido->cliente->nombre }} · {{ $pedido->fecha_hora->format('H:i') }}</span>
+                                <span class="tc-gris">{{ $pedido->cliente->nombre }} ({{ $pedido->cliente->numero }}) · {{ $pedido->fecha_hora->format('H:i') }}</span>
                                 <span class="tc-espera {{ $tarde ? 'tc-tarde' : '' }}">⏱ {{ $pedido->tiempoDeEspera() }}</span>
                             </div>
 

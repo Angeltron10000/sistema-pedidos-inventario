@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\Texto;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -32,6 +34,33 @@ class Producto extends Model
         'stock_minimo',
         'activo',
     ];
+
+    /**
+     * El nombre se guarda "limpio": sin espacios especiales ni caracteres invisibles
+     * que trae a veces el texto copiado y pegado (ver App\Support\Texto).
+     */
+    protected function nombre(): Attribute
+    {
+        return Attribute::make(set: fn (?string $valor): string => Texto::limpiar($valor));
+    }
+
+    /**
+     * Busca otro producto ACTIVO con el mismo nombre (RN-17).
+     * Compara sin importar mayúsculas, espacios especiales ni caracteres invisibles:
+     * "Café americano", "CAFÉ AMERICANO" y un "Café americano" copiado y pegado son el mismo nombre.
+     *
+     * @param  int|null  $ignorarId  el producto que se está editando (no cuenta contra sí mismo)
+     */
+    public static function otroActivoConNombre(?string $nombre, ?int $ignorarId = null): ?self
+    {
+        $clave = Texto::clave($nombre);
+
+        return static::query()
+            ->where('activo', true)
+            ->when($ignorarId, fn (Builder $q) => $q->where('id_producto', '!=', $ignorarId))
+            ->get(['id_producto', 'nombre', 'activo'])
+            ->first(fn (Producto $producto): bool => Texto::clave($producto->nombre) === $clave);
+    }
 
     /**
      * Productos que se pueden agregar a un pedido nuevo: activos y con existencia (RN-19).

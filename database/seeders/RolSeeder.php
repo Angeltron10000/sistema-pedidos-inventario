@@ -16,6 +16,7 @@ class RolSeeder extends Seeder
             ['nombre' => 'Administrador', 'descripcion' => 'Acceso total al sistema'],
             ['nombre' => 'Cajero/Mesero', 'descripcion' => 'Registra y entrega pedidos; consulta productos'],
             ['nombre' => 'Cocina',        'descripcion' => 'Consulta pedidos y los cambia a En preparación y Listo'],
+            ['nombre' => 'Cliente',       'descripcion' => 'Consulta su pedido con folio y código; no entra al panel'],
         ];
 
         foreach ($roles as $rol) {

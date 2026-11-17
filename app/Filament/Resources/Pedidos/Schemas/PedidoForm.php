@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Pedidos\Schemas;
 
+use App\Filament\Resources\Clientes\Schemas\ClienteForm;
 use App\Models\Cliente;
 use App\Models\Configuracion;
 use App\Models\Pedido;
@@ -46,28 +47,20 @@ class PedidoForm
                                 titleAttribute: 'nombre',
                                 modifyQueryUsing: fn (Builder $query) => $query->where('activo', true)->orderBy('id_cliente'),
                             )
-                            // Muestra el teléfono junto al nombre y busca por nombre o teléfono (RF-24)
-                            ->getOptionLabelFromRecordUsing(fn (Cliente $cliente): string => $cliente->telefono
-                                ? "{$cliente->nombre} · Tel. {$cliente->telefono}"
-                                : $cliente->nombre)
-                            ->searchable(['nombre', 'telefono'])
+                            // Muestra nombre, teléfono y número de cliente: "Ana Torres · 5512345678 · CLI-0002".
+                            // Así se distinguen dos clientes que se llaman igual (RF-24)
+                            ->getOptionLabelFromRecordUsing(fn (Cliente $cliente): string => $cliente->etiqueta())
+                            // Busca por nombre, teléfono o número de cliente (CLI-0002 o solo 2)
+                            ->searchable()
+                            ->getSearchResultsUsing(fn (?string $search): array => self::buscarClientes($search))
                             ->preload()
                             ->default(1)                // 1 = "Público en general / Mostrador" (RN-26)
-                            ->helperText('Escribe el nombre o el teléfono. Si es nuevo, usa el botón + para registrarlo.')
+                            ->helperText('Escribe el nombre, el teléfono o el número de cliente (CLI-0002). Si es nuevo, usa el botón + para registrarlo.')
                             // Botón + para registrar un cliente nuevo sin salir del pedido (RF-23)
+                            // (mismos campos y avisos de nombre o teléfono repetido que en Clientes)
                             ->createOptionForm([
-                                TextInput::make('nombre')
-                                    ->label('Nombre completo')
-                                    ->required()
-                                    ->maxLength(80),
-                                TextInput::make('telefono')
-                                    ->label('Teléfono')
-                                    ->tel()
-                                    ->maxLength(15)
-                                    ->regex('/^[0-9 ()+-]{7,15}$/')
-                                    ->validationMessages([
-                                        'regex' => 'Escribe solo números (puede llevar espacios, guiones o paréntesis).',
-                                    ]),
+                                ClienteForm::campoNombre(),
+                                ClienteForm::campoTelefono(),
                             ])
                             ->createOptionModalHeading('Registrar cliente nuevo')
                             ->required(),
@@ -156,6 +149,34 @@ class PedidoForm
     public static function pedidoEnEdicion($livewire): ?Pedido
     {
         return $livewire instanceof EditRecord ? $livewire->getRecord() : null;
+    }
+
+    /**
+     * Búsqueda de clientes activos para el pedido: por nombre, teléfono o número de cliente.
+     * "ana" encuentra a Ana Torres, "5512" busca por teléfono y "CLI-0002" (o "2") por número.
+     *
+     * @return array<int, string>  [id_cliente => "Ana Torres · 5512345678 · CLI-0002"]
+     */
+    public static function buscarClientes(?string $busqueda): array
+    {
+        $busqueda = trim((string) $busqueda);
+        $id = Cliente::idDesdeNumero($busqueda);
+
+        return Cliente::query()
+            ->where('activo', true)
+            ->where(function (Builder $q) use ($busqueda, $id): void {
+                $q->where('nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('telefono', 'like', "%{$busqueda}%");
+
+                if ($id) {
+                    $q->orWhere('id_cliente', $id);
+                }
+            })
+            ->orderBy('nombre')
+            ->limit(50)
+            ->get()
+            ->mapWithKeys(fn (Cliente $cliente): array => [$cliente->id_cliente => $cliente->etiqueta()])
+            ->all();
     }
 
     /**

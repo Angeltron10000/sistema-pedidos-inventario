@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\Texto;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -24,6 +27,31 @@ class Categoria extends Model
         'nombre',
         'activo',
     ];
+
+    /**
+     * El nombre se guarda "limpio": sin espacios especiales ni caracteres invisibles
+     * que trae a veces el texto copiado y pegado (ver App\Support\Texto).
+     */
+    protected function nombre(): Attribute
+    {
+        return Attribute::make(set: fn (?string $valor): string => Texto::limpiar($valor));
+    }
+
+    /**
+     * Busca otra categoría (activa o no) con el mismo nombre.
+     * Compara sin importar mayúsculas, espacios especiales ni caracteres invisibles.
+     *
+     * @param  int|null  $ignorarId  la categoría que se está editando (no cuenta contra sí misma)
+     */
+    public static function otraConNombre(?string $nombre, ?int $ignorarId = null): ?self
+    {
+        $clave = Texto::clave($nombre);
+
+        return static::query()
+            ->when($ignorarId, fn (Builder $q) => $q->where('id_categoria', '!=', $ignorarId))
+            ->get(['id_categoria', 'nombre'])
+            ->first(fn (Categoria $categoria): bool => Texto::clave($categoria->nombre) === $clave);
+    }
 
     /**
      * Conversión automática de tipos de dato.

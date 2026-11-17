@@ -25,6 +25,13 @@ class PedidoInfolist
                         TextEntry::make('folio')
                             ->label('Folio')
                             ->weight(FontWeight::Bold),
+                        // El cliente escribe folio + código en la página de consulta para ver su pedido
+                        TextEntry::make('codigo_consulta')
+                            ->label('Código de consulta')
+                            ->weight(FontWeight::Bold)
+                            ->copyable()
+                            ->placeholder('—')
+                            ->helperText('El cliente lo usa con el folio en la página de consulta.'),
                         TextEntry::make('estado.nombre')
                             ->label('Estado actual')
                             ->badge()
@@ -37,7 +44,8 @@ class PedidoInfolist
                             ->money('MXN', locale: 'es_MX')
                             ->weight(FontWeight::Bold),
                         TextEntry::make('cliente.nombre')
-                            ->label('Cliente'),
+                            ->label('Cliente')
+                            ->formatStateUsing(fn ($record): string => "{$record->cliente->nombre} ({$record->cliente->numero})"),
                         TextEntry::make('tipo_servicio')
                             ->label('Servicio')
                             ->formatStateUsing(fn (string $state): string => $state === 'llevar' ? 'Para llevar' : 'Comer aquí'),

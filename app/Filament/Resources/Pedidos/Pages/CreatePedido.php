@@ -40,6 +40,13 @@ class CreatePedido extends CreateRecord
         return "Pedido {$this->record->folio} registrado. Total: $" . number_format((float) $this->record->total, 2);
     }
 
+    /** El aviso de "pedido registrado" también muestra el código de consulta para el cliente. */
+    protected function getCreatedNotification(): ?Notification
+    {
+        return parent::getCreatedNotification()
+            ?->body("Código de consulta para el cliente: {$this->record->codigo_consulta} (viene en su comprobante).");
+    }
+
     /** Si algún producto quedó con stock bajo o agotado, se avisa (RF-21, RN-20). */
     protected function afterCreate(): void
     {

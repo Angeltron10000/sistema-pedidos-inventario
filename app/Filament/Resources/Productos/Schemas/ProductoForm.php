@@ -8,8 +8,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use App\Models\Producto;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Validation\Rules\Unique;
 
 /**
  * Formulario para crear y editar productos.
@@ -30,14 +31,16 @@ class ProductoForm
                             ->placeholder('Ejemplo: Chilaquiles verdes')
                             ->required()
                             ->maxLength(80)
-                            // RN-17: no puede haber dos productos activos con el mismo nombre
-                            ->unique(
-                                ignoreRecord: true,
-                                modifyRuleUsing: fn (Unique $rule) => $rule->where('activo', true),
-                            )
-                            ->validationMessages([
-                                'unique' => 'Ya existe un producto activo con ese nombre.',
-                            ]),
+                            // RN-17: no puede haber dos productos activos con el mismo nombre.
+                            // Se compara sin importar mayúsculas ni los caracteres invisibles
+                            // que trae a veces el texto copiado y pegado (ver App\Support\Texto).
+                            ->rule(fn (?Producto $record): Closure => function (string $attribute, $value, Closure $fail) use ($record): void {
+                                $repetido = Producto::otroActivoConNombre($value, $record?->id_producto);
+
+                                if ($repetido) {
+                                    $fail("Ya existe un producto activo con ese nombre ({$repetido->nombre}).");
+                                }
+                            }),
                         Select::make('id_categoria')
                             ->label('Categoría')
                             ->relationship(

@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Orden realizada por un cliente; tiene folio único, estado actual y total.
+ * Orden realizada por un cliente; tiene folio único, código de consulta, estado actual y total.
  */
 class Pedido extends Model
 {
+    /** Letras y números para el código de consulta, sin los que se confunden (0/O, 1/I/L). */
+    public const CARACTERES_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
     /** Nombre de la tabla en la base de datos. */
     protected $table = 'pedido';
 
@@ -24,6 +27,7 @@ class Pedido extends Model
     /** Campos que se pueden llenar con create() o fill(). */
     protected $fillable = [
         'folio',
+        'codigo_consulta',
         'id_cliente',
         'id_usuario',
         'id_estado',
@@ -33,6 +37,51 @@ class Pedido extends Model
         'observaciones',
         'motivo_cancelacion',
     ];
+
+    /**
+     * Cada pedido nuevo recibe su código de consulta al guardarse por primera vez.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Pedido $pedido): void {
+            if (blank($pedido->codigo_consulta)) {
+                $pedido->codigo_consulta = self::generarCodigoConsulta();
+            }
+        });
+    }
+
+    /**
+     * Código corto al azar, por ejemplo "K7P2". Se imprime en el comprobante y,
+     * junto con el folio, permite al cliente consultar su pedido.
+     */
+    public static function generarCodigoConsulta(): string
+    {
+        $codigo = '';
+        for ($i = 0; $i < 4; $i++) {
+            $codigo .= self::CARACTERES_CODIGO[random_int(0, strlen(self::CARACTERES_CODIGO) - 1)];
+        }
+
+        return $codigo;
+    }
+
+    /**
+     * Busca el pedido que corresponde a un folio y un código escritos por el cliente.
+     * Acepta el folio como "PED-0021", "ped-21", "ped21" o "21", y el código en mayúsculas o minúsculas.
+     * Si el folio o el código no coinciden, devuelve null (no se dice cuál de los dos está mal).
+     */
+    public static function buscarParaConsulta(?string $folio, ?string $codigo): ?self
+    {
+        $numero = preg_match('/^\s*(?:ped\s*-?\s*)?0*(\d{1,9})\s*$/i', (string) $folio, $partes) ? (int) $partes[1] : null;
+        $codigo = strtoupper(preg_replace('/\s+/', '', (string) $codigo) ?? '');
+
+        if (! $numero || strlen($codigo) !== 4) {
+            return null;
+        }
+
+        $pedido = static::where('folio', sprintf('PED-%04d', $numero))->first();
+
+        return $pedido && hash_equals((string) $pedido->codigo_consulta, $codigo) ? $pedido : null;
+    }
 
     /**
      * Conversión automática de tipos de dato.
@@ -124,6 +173,15 @@ class Pedido extends Model
     public function sePuedeCancelar(): bool
     {
         return in_array($this->estado?->orden, [1, 2], true);
+    }
+
+    /**
+     * El cliente solo puede cancelar su pedido desde la consulta mientras está en "Recibido",
+     * es decir, antes de que la cocina empiece a prepararlo.
+     */
+    public function sePuedeCancelarPorCliente(): bool
+    {
+        return $this->estado?->orden === 1;
     }
 
     /**

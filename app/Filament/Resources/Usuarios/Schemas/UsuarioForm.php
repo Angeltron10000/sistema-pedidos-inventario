@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Usuarios\Schemas;
 
+use App\Models\Rol;
 use App\Models\Usuario;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -9,6 +10,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -47,7 +49,12 @@ class UsuarioForm
                             ]),
                         Select::make('id_rol')
                             ->label('Rol')
-                            ->relationship('rol', 'nombre')
+                            // El rol "Cliente" no se asigna a empleados: los clientes usan la página de consulta
+                            ->relationship(
+                                name: 'rol',
+                                titleAttribute: 'nombre',
+                                modifyQueryUsing: fn (Builder $query) => $query->where('id_rol', '!=', Rol::CLIENTE),
+                            )
                             ->required()
                             ->helperText('Administrador: todo. Cajero/Mesero: pedidos y clientes. Cocina: preparar pedidos.')
                             // El administrador no puede quitarse su propio rol

@@ -308,35 +308,73 @@ class PedidoService
             ]);
         }
 
-        DB::transaction(function () use ($pedido, $motivo, $usuario) {
-            $cancelado = EstadoPedido::where('orden', 0)->firstOrFail();
+        DB::transaction(fn () => $this->registrarCancelacion($pedido, $motivo, $usuario));
 
-            $pedido->update([
-                'id_estado'          => $cancelado->id_estado,
-                'motivo_cancelacion' => $motivo,
-            ]);
+        return $pedido->refresh();
+    }
 
-            $pedido->historial()->create([
-                'id_estado'  => $cancelado->id_estado,
-                'id_usuario' => $usuario->id_usuario,
-                'fecha_hora' => now(),
-            ]);
+    /**
+     * El cliente cancela su propio pedido desde la página de consulta.
+     * Solo se puede mientras el pedido está en "Recibido" (antes de que la cocina empiece).
+     * Las existencias regresan al inventario igual que en una cancelación normal, y en el
+     * historial queda anotado el usuario "Cliente (consulta en línea)".
+     *
+     * @param  string|null  $motivo  lo que escribió el cliente (opcional)
+     */
+    public function cancelarPorCliente(Pedido $pedido, ?string $motivo = null): Pedido
+    {
+        $cuentaCliente = Usuario::cuentaConsultaCliente();
+        $motivo = trim((string) $motivo);
+        $texto = 'Cancelado por el cliente desde la consulta en línea' . ($motivo !== '' ? ": {$motivo}" : '');
 
-            // Reintegro: cada producto del pedido regresa al inventario
-            foreach ($pedido->detalles as $detalle) {
-                $pedido->movimientos()->create([
-                    'id_producto' => $detalle->id_producto,
-                    'id_usuario'  => $usuario->id_usuario,
-                    'tipo'        => 'entrada',
-                    'cantidad'    => $detalle->cantidad,
-                    'fecha_hora'  => now(),
-                    'motivo'      => "Reintegro por cancelación de {$pedido->folio}",
+        DB::transaction(function () use ($pedido, $texto, $cuentaCliente) {
+            // Se vuelve a leer el pedido bloqueándolo: si la cocina lo acaba de pasar a
+            // "En preparación" en este mismo momento, ya no se cancela.
+            $actual = Pedido::whereKey($pedido->getKey())->lockForUpdate()->with('estado')->firstOrFail();
+
+            if (! $actual->sePuedeCancelarPorCliente()) {
+                throw ValidationException::withMessages([
+                    'pedido' => 'Tu pedido ya se está preparando y ya no se puede cancelar desde aquí. Si necesitas un cambio, acude a caja.',
                 ]);
-                Producto::where('id_producto', $detalle->id_producto)->increment('existencia', $detalle->cantidad);
             }
+
+            $this->registrarCancelacion($actual, mb_substr($texto, 0, 200), $cuentaCliente);
         });
 
         return $pedido->refresh();
+    }
+
+    /**
+     * Pasos de una cancelación: estado "Cancelado", motivo, historial y reintegro
+     * de cada producto al inventario. Se llama dentro de una transacción.
+     */
+    private function registrarCancelacion(Pedido $pedido, string $motivo, Usuario $usuario): void
+    {
+        $cancelado = EstadoPedido::where('orden', 0)->firstOrFail();
+
+        $pedido->update([
+            'id_estado'          => $cancelado->id_estado,
+            'motivo_cancelacion' => $motivo,
+        ]);
+
+        $pedido->historial()->create([
+            'id_estado'  => $cancelado->id_estado,
+            'id_usuario' => $usuario->id_usuario,
+            'fecha_hora' => now(),
+        ]);
+
+        // Reintegro: cada producto del pedido regresa al inventario
+        foreach ($pedido->detalles as $detalle) {
+            $pedido->movimientos()->create([
+                'id_producto' => $detalle->id_producto,
+                'id_usuario'  => $usuario->id_usuario,
+                'tipo'        => 'entrada',
+                'cantidad'    => $detalle->cantidad,
+                'fecha_hora'  => now(),
+                'motivo'      => "Reintegro por cancelación de {$pedido->folio}",
+            ]);
+            Producto::where('id_producto', $detalle->id_producto)->increment('existencia', $detalle->cantidad);
+        }
     }
 
     /**
